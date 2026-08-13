@@ -1,0 +1,17 @@
+20words_mean_face.npy attribution and license
+===============================================
+
+Source repository:
+https://github.com/mpc001/Lipreading_using_Temporal_Convolutional_Networks
+
+Copyright (c) 2020, Pingchuan Ma. All rights reserved.
+
+The source repository's LICENSE permits redistribution subject to retaining
+its notice and disclaimer, restricts endorsement, and limits use of BBC
+content to private study or a separate comparative research prototype. Read
+the authoritative license at the source URL above before redistribution.
+
+This notice is included conservatively because the mean-face coordinates are
+distributed by that repository. A public commercial release should replace
+the asset with a reference computed from appropriately licensed landmarks or
+obtain written clearance.

@@ -1,0 +1,4 @@
+-r requirements-api.txt
+# Install a CUDA-compatible torch/torchvision/torchaudio build first from
+# https://pytorch.org/get-started/locally/ for the target NVIDIA driver, then:
+-r requirements-model.txt
