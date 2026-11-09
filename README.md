@@ -1,5 +1,7 @@
 # LipLens — đọc môi tiếng Việt · 1.5.0
 
+Repository riêng: [ntthienphuc/liplens-app](https://github.com/ntthienphuc/liplens-app).
+
 Ứng dụng Android dùng camera và máy chủ suy luận trên PC. Phụ đề live **chỉ dùng
 hình ảnh**; video lưu trên điện thoại có âm thanh để đối chiếu khi kiểm thử.
 Tự phát hiện chuyển động môi và khoảng ngừng, tiếp tục nhận câu mới mà không cần
