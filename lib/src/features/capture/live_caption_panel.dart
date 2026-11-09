@@ -63,9 +63,18 @@ class LiveCaptionPanel extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(18, 6, 12, 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.ink.withValues(alpha: .035),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+        ],
         border: Border.all(
-          color: unavailable ? AppColors.error : AppColors.border,
+          color: unavailable
+              ? AppColors.error
+              : AppColors.primary.withValues(alpha: .2),
         ),
       ),
       child: Column(
@@ -83,7 +92,7 @@ class LiveCaptionPanel extends StatelessWidget {
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(
-                  'Phụ đề',
+                  'Phụ đề trực tiếp',
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                 ),
               ),
@@ -104,12 +113,20 @@ class LiveCaptionPanel extends StatelessWidget {
               ),
             ],
           ),
-          Text(
-            status,
-            style: TextStyle(
-              color: accent,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: .07),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              status,
+              style: TextStyle(
+                color: accent,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
           const SizedBox(height: 10),

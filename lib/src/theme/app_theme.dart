@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 abstract final class AppColors {
-  static const ink = Color(0xFF1A292B);
-  static const muted = Color(0xFF687777);
-  static const canvas = Color(0xFFF5F7F6);
+  static const ink = Color(0xFF16343C);
+  static const muted = Color(0xFF586C73);
+  static const canvas = Color(0xFFF3F6F6);
   static const surface = Color(0xFFFFFFFF);
-  static const primary = Color(0xFF21665E);
-  static const primarySoft = Color(0xFFE0EFEB);
+  static const primary = Color(0xFF0C756E);
+  static const primarySoft = Color(0xFFE1F2EE);
   static const accent = Color(0xFFFF8A5B);
   static const warning = Color(0xFFF59E0B);
   static const warningSoft = Color(0xFFFFF3D6);
@@ -25,6 +25,11 @@ abstract final class AppTheme {
     return ThemeData(
       useMaterial3: true,
       fontFamily: 'Nunito',
+      textTheme: ThemeData.light().textTheme.apply(
+        fontFamily: 'Nunito',
+        bodyColor: AppColors.ink,
+        displayColor: AppColors.ink,
+      ),
       colorScheme: scheme.copyWith(
         primary: AppColors.primary,
         error: AppColors.error,
@@ -84,6 +89,8 @@ abstract final class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         height: 70,
         backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
         indicatorColor: AppColors.primarySoft,
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => TextStyle(

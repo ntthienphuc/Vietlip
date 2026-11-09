@@ -1,4 +1,9 @@
-# Current application runtime (LipLens 1.5.0)
+# Current application runtime (VietLip 1.6.0)
+
+The installed Windows application is `desktop_launcher.py` with the bundled
+Python runtime. It shows the PC's LAN IP; Android connects over local Wi-Fi/LAN.
+Build/install instructions: `../packaging/windows_server/README.md`. No USB
+inference route, LLM or external API key is needed for the user workflow.
 
 Start `run_realtime.ps1` for the tested SO17 native runtime. Model startup and
 visual-activity preparation finish before live connections are accepted. See the

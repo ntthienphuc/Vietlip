@@ -105,7 +105,7 @@ if ($OutputDir) {
         Where-Object { $_ -match '^version:\s*([0-9.]+)' } | Select-Object -First 1
     if ($versionLine -notmatch '^version:\s*([0-9.]+)') { throw 'App version not found.' }
     $appVersion = $Matches[1]
-    $targetApk = Join-Path $resolvedOutputDir "LipReader-App-Android-v$appVersion-$Mode.apk"
+    $targetApk = Join-Path $resolvedOutputDir "VietLip-$appVersion-$Mode.apk"
     Copy-Item -LiteralPath $sourceApk -Destination $targetApk -Force
     Write-Output "APK packaged: $targetApk"
 } else {

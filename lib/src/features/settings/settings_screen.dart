@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../data/lip_reader_api.dart';
 import '../../data/settings_controller.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/app_brand.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({required this.settings, super.key});
@@ -35,6 +36,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
     try {
       await widget.settings.setApiUrl(_urlController.text);
+      _urlController.text = widget.settings.apiUrl;
       final health = await LipReaderApi(widget.settings).health();
       if (mounted) setState(() => _health = health);
     } catch (error) {
@@ -67,14 +69,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
               keyboardType: TextInputType.url,
               autocorrect: false,
               decoration: const InputDecoration(
-                labelText: 'Địa chỉ máy chủ',
-                hintText: 'http://192.168.1.20:7100',
+                labelText: 'IP máy tính',
+                hintText: '192.168.1.20:7100',
                 prefixIcon: Icon(Icons.dns_outlined),
                 helperText:
-                    'Dùng địa chỉ Wi-Fi của PC, hoặc 127.0.0.1 khi đã kết nối USB.',
+                    'Nhập IP hiển thị trên VietLip Server. Cổng mặc định: 7100.',
+                helperMaxLines: 2,
               ),
             ),
             const SizedBox(height: 12),
+            const ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.wifi_rounded, color: AppColors.primary),
+              title: Text(
+                'Cùng mạng Wi-Fi / LAN',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              subtitle: Text(
+                'Mở VietLip Server trên máy tính và chờ “Sẵn sàng đọc môi”.',
+              ),
+            ),
+            const SizedBox(height: 8),
             FilledButton.icon(
               onPressed: _checking ? null : _saveAndCheck,
               icon: _checking
@@ -108,11 +123,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           color: AppColors.primary,
                         ),
                         SizedBox(width: 8),
-                        Text(
-                          _health!['realtime_available'] == true
-                              ? 'Sẵn sàng đọc môi'
-                              : 'Máy chủ chưa sẵn sàng live',
-                          style: TextStyle(fontWeight: FontWeight.w800),
+                        Expanded(
+                          child: Text(
+                            _health!['realtime_available'] == true
+                                ? 'Sẵn sàng đọc môi'
+                                : 'Máy chủ chưa sẵn sàng live',
+                            style: TextStyle(fontWeight: FontWeight.w800),
+                          ),
                         ),
                       ],
                     ),
@@ -187,6 +204,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 22),
+            const ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: BrandMark(),
+              title: Text(
+                '${AppBrand.name} ${AppBrand.version}',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+              subtitle: Text('Đọc môi tiếng Việt · bản thử nghiệm'),
+            ),
+            const SizedBox(height: 12),
             const Card(
               child: ListTile(
                 leading: Icon(Icons.privacy_tip_outlined),

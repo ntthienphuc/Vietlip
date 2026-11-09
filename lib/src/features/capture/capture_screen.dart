@@ -17,6 +17,7 @@ import '../../data/lip_reader_api.dart';
 import '../../data/settings_controller.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_shell.dart';
+import '../../widgets/app_brand.dart';
 import 'live_caption_panel.dart';
 import 'camera_viewport.dart';
 import 'capture_camera_panel.dart';
@@ -354,6 +355,11 @@ class _CaptureScreenState extends State<CaptureScreen>
 
   Future<LiveLipSession?> _openLiveSession(CameraController controller) async {
     if (!_livePreviewEnabled) return null;
+    if (widget.settings.apiUrl.isEmpty) {
+      throw StateError(
+        'Vào Cài đặt và nhập IP hiển thị trên VietLip Server. Điện thoại và máy tính cần cùng Wi-Fi.',
+      );
+    }
     if (!controller.supportsImageStreaming()) {
       throw StateError(
         'Camera này không hỗ trợ live. Bạn có thể tắt phụ đề trực tiếp để quay video.',
@@ -731,8 +737,7 @@ class _CaptureScreenState extends State<CaptureScreen>
           crossAxisAlignment: WrapCrossAlignment.center,
           alignment: WrapAlignment.spaceBetween,
           children: [
-            Icon(Icons.graphic_eq_rounded, color: AppColors.primary, size: 22),
-            SizedBox(width: 10),
+            BrandMark(size: 30),
             Text(
               'Đang live',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
@@ -754,20 +759,8 @@ class _CaptureScreenState extends State<CaptureScreen>
         slivers: [
           SliverAppBar(
             floating: true,
-            title: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('LipLens', style: TextStyle(fontWeight: FontWeight.w800)),
-                Text(
-                  'Đọc lời nói qua chuyển động môi',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.muted,
-                  ),
-                ),
-              ],
-            ),
+            toolbarHeight: 76,
+            title: const CaptureBrandHeader(),
             actions: [
               IconButton(
                 tooltip: 'Tuỳ chọn quay',
@@ -1102,7 +1095,8 @@ class _CaptureScreenState extends State<CaptureScreen>
   }
 
   Widget _buildLiveDraft() => SizedBox(
-    height: 270,
+    height:
+        270 + (MediaQuery.textScalerOf(context).scale(1) - 1).clamp(0, 3) * 210,
     child: LiveCaptionPanel(
       transcript: _liveTranscript,
       committed: _liveStableTranscript,

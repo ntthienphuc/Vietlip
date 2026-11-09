@@ -85,8 +85,7 @@ class Settings:
 
     @classmethod
     def from_env(cls) -> "Settings":
-        lip_reader_root = Path(__file__).resolve().parents[2]
-        server_root = lip_reader_root / "server"
+        server_root = Path(__file__).resolve().parents[1]
         model_root = server_root / "vendor" / "auto_avsr"
         vocabulary_root = server_root / "assets" / "tokenizers"
         return cls(

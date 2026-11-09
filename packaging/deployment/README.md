@@ -1,5 +1,9 @@
 # Lip Reader deployment profiles
 
+> Historical 1.1 deployment notes. These container and optional LLM recipes have
+> not been revalidated for VietLip 1.6.0. For the current LAN application and
+> selected native SO17 model, use `../windows_server/README.md`.
+
 ## 1. Windows companion server
 
 Use the signed application APK with the Inno Setup companion server for one

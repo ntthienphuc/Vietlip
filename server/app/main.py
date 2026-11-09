@@ -72,6 +72,7 @@ def create_app(
         app.state.engine = inference_engine
         app.state.inference_semaphore = asyncio.Semaphore(1)
         app.state.llm = llm_processor
+        app.state.startup_error = None
         app.state.jobs: dict[str, dict[str, Any]] = {}
         app.state.job_queue = asyncio.Queue(maxsize=config.max_queued_jobs)
         app.state.job_worker_task = asyncio.create_task(_job_worker(app))
@@ -86,6 +87,7 @@ def create_app(
                 # Health reports the real model error while the API remains
                 # available for diagnosis.
                 logger.exception("Model startup preparation failed")
+                app.state.startup_error = "Khởi động chưa hoàn tất. Xem nhật ký máy chủ."
         try:
             yield
         finally:
@@ -100,7 +102,7 @@ def create_app(
                     path.unlink(missing_ok=True)
 
     app = FastAPI(
-        title="Vietnamese Lip Reader API",
+        title="VietLip API",
         version=config.api_version,
         description=(
             "CPU-capable, GPU-preferred Auto-AVSR review API. "
@@ -157,7 +159,9 @@ def create_app(
             llm_available = False
         return HealthResponse(
             api_version=config.api_version,
-            status="degraded" if current_engine.state == "error" else "ok",
+            status="degraded"
+            if current_engine.state == "error" or app.state.startup_error
+            else "ok",
             model_state=current_engine.state,
             model_loaded=current_engine.loaded,
             cuda_available=current_engine.cuda_available,
@@ -167,11 +171,16 @@ def create_app(
             model_id=current_engine.model_id,
             llm_available=llm_available,
             llm_model=app.state.llm.model_label,
-            last_error=current_engine.last_error,
+            last_error=app.state.startup_error or current_engine.last_error,
             queued_jobs=app.state.job_queue.qsize(),
             active_job=any(item.get("status") == "processing" for item in app.state.jobs.values()),
             job_capacity=config.max_queued_jobs,
-            realtime_available=config.realtime_enabled,
+            realtime_available=(
+                config.realtime_enabled
+                and current_engine.loaded
+                and current_engine.state == "ready"
+                and not app.state.startup_error
+            ),
             realtime_mode=("continuous_visual_captions" if config.realtime_enabled else None),
             realtime_max_seconds=(config.realtime_max_seconds if config.realtime_enabled else None),
         )

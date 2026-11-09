@@ -10,6 +10,7 @@ import 'features/settings/settings_screen.dart';
 import 'models/transcription_result.dart';
 import 'theme/app_theme.dart';
 import 'widgets/app_shell.dart';
+import 'widgets/app_brand.dart';
 
 class LipReaderApp extends StatefulWidget {
   const LipReaderApp({
@@ -88,7 +89,7 @@ class _LipReaderAppState extends State<LipReaderApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'LipLens',
+      title: AppBrand.name,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       routerConfig: _router,

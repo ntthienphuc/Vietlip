@@ -21,8 +21,15 @@ class LipReaderApi {
   final Dio _dio;
 
   Future<Map<String, dynamic>> health() async {
+    if (settings.apiUrl.isEmpty) {
+      throw const FormatException('Nhập IP hiển thị trên VietLip Server.');
+    }
     final response = await _dio.get<Map<String, dynamic>>(
       '${settings.apiUrl}/healthz',
+      options: Options(
+        receiveTimeout: const Duration(seconds: 5),
+        sendTimeout: const Duration(seconds: 5),
+      ),
     );
     return response.data ?? const {};
   }

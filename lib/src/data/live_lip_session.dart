@@ -152,9 +152,7 @@ class LiveLipSession {
               if (json['protocol'] != 2) {
                 if (!_ready.isCompleted) {
                   _ready.completeError(
-                    StateError(
-                      'Cần cập nhật Lip Reader Server lên giao thức 2.',
-                    ),
+                    StateError('Cần cập nhật máy chủ VietLip lên giao thức 2.'),
                   );
                 }
                 return;

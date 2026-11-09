@@ -1,417 +1,310 @@
+"""VietLip Windows companion. The bundled interpreter also supports headless QA."""
+
 from __future__ import annotations
 
-import json
+import argparse
 import logging
+from logging.handlers import RotatingFileHandler
 import os
 import queue
-import socket
-import subprocess
-import sys
 import threading
-import time
 import tkinter as tk
-import urllib.error
-import urllib.request
-import webbrowser
-from pathlib import Path
 from tkinter import messagebox, scrolledtext, ttk
 
-
-APP_NAME = "Lip Reader Server"
-HOST = "0.0.0.0"
-PORT = 7100
-LOCAL_HEALTH_URL = f"http://127.0.0.1:{PORT}/healthz"
-
-
-def app_dir() -> Path:
-    if getattr(sys, "frozen", False):
-        return Path(sys.executable).resolve().parent
-    return Path(__file__).resolve().parent
-
-
-def data_dir() -> Path:
-    root = Path(os.getenv("LOCALAPPDATA", str(Path.home())))
-    target = root / "Lip Reader Server"
-    target.mkdir(parents=True, exist_ok=True)
-    return target
-
-
-def load_env_file(path: Path) -> None:
-    if not path.is_file():
-        return
-    for raw_line in path.read_text(encoding="utf-8-sig").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#"):
-            continue
-        key, separator, value = line.partition("=")
-        if not separator:
-            continue
-        os.environ.setdefault(key.strip(), value.strip())
-
-
-def configure_runtime() -> None:
-    root = app_dir()
-    load_env_file(root / "config.env")
-    resources = root / "resources"
-    defaults = {
-        "LIP_MODEL_BACKEND": "auto_avsr",
-        "LIP_MODEL_LOAD_ON_STARTUP": "true",
-        "LIP_DEVICE": "auto",
-        "LIP_PRECISION": "auto",
-        "LIP_ALLOW_CPU_FALLBACK": "true",
-        "LIP_MAX_UPLOAD_BYTES": "104857600",
-        "LIP_MAX_FRAMES": "1125",
-        "LIP_MAX_QUEUED_JOBS": "8",
-        "LIP_JOB_RETENTION_SECONDS": "1800",
-        "LIP_MIN_FRAMES": "8",
-        "LIP_TARGET_FPS": "25",
-        "AUTO_AVSR_CHECKPOINT": str(
-            resources / "models" / "epoch=13-step=55986-002.ckpt"
-        ),
-        "AUTO_AVSR_ROOT": str(resources / "auto_avsr"),
-        "VSR_SPM_MODEL": str(
-            resources / "vocabulary" / "vi_unigram_2000.model"
-        ),
-        "VSR_SPM_UNITS": str(
-            resources
-            / "vocabulary"
-            / "vi_unigram_2000.auto_avsr_units.txt"
-        ),
-        "LIP_LLM_TIMEOUT_SECONDS": "90",
-        "LIP_LLM_NUM_CTX": "2048",
-        "LIP_LLM_MAX_OUTPUT_TOKENS": "320",
-        "LIP_LLM_KEEP_ALIVE": "0",
-    }
-    for key, value in defaults.items():
-        os.environ.setdefault(key, value)
-
-
-def local_ipv4() -> str:
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        sock.connect(("8.8.8.8", 80))
-        return str(sock.getsockname()[0])
-    except OSError:
-        try:
-            return socket.gethostbyname(socket.gethostname())
-        except OSError:
-            return "127.0.0.1"
-    finally:
-        sock.close()
-
-
-def read_health(timeout: float = 1.5) -> dict | None:
-    try:
-        with urllib.request.urlopen(LOCAL_HEALTH_URL, timeout=timeout) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-        if payload.get("service") == "lip-reader-api":
-            return payload
-    except (OSError, ValueError, urllib.error.URLError):
-        return None
-    return None
-
-
-def find_ollama() -> Path | None:
-    candidates = [
-        Path(os.getenv("LOCALAPPDATA", "")) / "Programs" / "Ollama" / "ollama.exe",
-        Path(os.getenv("PROGRAMFILES", "")) / "Ollama" / "ollama.exe",
-    ]
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
-    from shutil import which
-
-    resolved = which("ollama")
-    return Path(resolved) if resolved else None
-
-
-def ensure_ollama_started(logger: logging.Logger) -> None:
-    if os.getenv("LIP_LLM_PROVIDER", "").strip().lower() != "ollama":
-        return
-    try:
-        with urllib.request.urlopen(
-            "http://127.0.0.1:11434/api/tags", timeout=1.5
-        ):
-            return
-    except (OSError, urllib.error.URLError):
-        pass
-    executable = find_ollama()
-    if executable is None:
-        logger.warning(
-            "Không tìm thấy Ollama. Visual-only vẫn hoạt động; "
-            "có thể cài LLM lại từ bộ cài."
-        )
-        return
-    creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-    try:
-        subprocess.Popen(
-            [str(executable), "serve"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            creationflags=creation_flags,
-        )
-        logger.info("Đã khởi động Ollama.")
-    except OSError as exc:
-        logger.warning("Không thể khởi động Ollama: %s", exc)
+from desktop_runtime import (
+    APP_NAME,
+    APP_VERSION,
+    ROOT,
+    configure_runtime,
+    data_dir,
+    local_addresses,
+    port_available,
+    read_health,
+)
 
 
 class QueueLogHandler(logging.Handler):
-    def __init__(self, target: queue.Queue[str]):
+    def __init__(self, target: queue.Queue):
         super().__init__()
         self.target = target
 
-    def emit(self, record: logging.LogRecord) -> None:
+    def emit(self, record):
         try:
-            self.target.put_nowait(self.format(record))
-        except Exception:
+            self.target.put_nowait(("log", self.format(record)))
+        except queue.Full:
             pass
+
+
+def configure_logging(events=None):
+    formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s", "%H:%M:%S")
+    handler = RotatingFileHandler(
+        data_dir() / "server.log", maxBytes=4_000_000, backupCount=2, encoding="utf-8"
+    )
+    handlers = [handler]
+    if events is not None:
+        handlers.append(QueueLogHandler(events))
+    else:
+        handlers.append(logging.StreamHandler())
+    for item in handlers:
+        item.setFormatter(formatter)
+    logging.basicConfig(level=logging.INFO, handlers=handlers, force=True)
+
+
+def make_server(port):
+    import uvicorn
+    from app.main import app
+
+    return uvicorn.Server(
+        uvicorn.Config(
+            app,
+            host="0.0.0.0",
+            port=port,
+            log_config=None,
+            access_log=False,
+            ws_max_size=1100000,
+            ws_max_queue=8,
+        )
+    )
 
 
 class ServerWindow:
-    def __init__(self) -> None:
+    def __init__(self, args):
+        self.args = args
         self.root = tk.Tk()
-        self.root.title(APP_NAME)
-        self.root.geometry("760x560")
-        self.root.minsize(680, 500)
+        self.root.title(f"{APP_NAME} · {APP_VERSION}")
+        self.root.geometry("760x650")
+        self.root.minsize(700, 610)
+        self.root.configure(bg="#f3f6f6")
+        icon = ROOT.parent / "VietLip.ico"
+        if icon.is_file():
+            self.root.iconbitmap(str(icon))
         self.root.protocol("WM_DELETE_WINDOW", self.close)
-        self.log_queue: queue.Queue[str] = queue.Queue()
+        self.events = queue.Queue(maxsize=2000)
         self.server = None
-        self.server_thread: threading.Thread | None = None
-        self.owns_server = False
+        self.server_thread = None
         self.closing = False
-        self.lan_ip = local_ipv4()
-        self.status_var = tk.StringVar(value="Đang kiểm tra hệ thống…")
-        self.model_var = tk.StringVar(value="Model: đang nạp")
-        self.llm_var = tk.StringVar(value="LLM: đang kiểm tra")
-        self.address_var = tk.StringVar(
-            value=f"http://{self.lan_ip}:{PORT}"
+        self.polling = False
+        self.status = tk.StringVar(value="Đang chuẩn bị máy chủ…")
+        self.detail = tk.StringVar(value="Lần đầu có thể cần vài phút để nạp mô hình.")
+        self.network_status = tk.StringVar(
+            value="Điện thoại và PC cần kết nối cùng mạng Wi-Fi / LAN."
+        )
+        self.addresses = local_addresses(args.port)
+        self.lan = tk.StringVar(
+            value=self.addresses[0] if self.addresses else "Chưa có địa chỉ mạng nội bộ"
         )
         self._build_ui()
-        self._configure_logging()
+        configure_logging(self.events)
         self.root.after(100, self.start)
-        self.root.after(200, self._drain_logs)
-        self.root.after(800, self._poll_health)
+        self.root.after(100, self.drain)
+        self.root.after(500, self.poll)
 
-    def _build_ui(self) -> None:
+    def _build_ui(self):
         style = ttk.Style()
-        try:
-            style.theme_use("vista")
-        except tk.TclError:
-            pass
-        frame = ttk.Frame(self.root, padding=20)
-        frame.pack(fill=tk.BOTH, expand=True)
-        ttk.Label(
-            frame,
-            text="Lip Reader Server",
-            font=("Segoe UI", 20, "bold"),
-        ).pack(anchor=tk.W)
-        ttk.Label(
-            frame,
-            text=(
-                "Giữ cửa sổ này mở khi điện thoại đang đọc môi. "
-                "Server tự chọn GPU nếu có và tự chuyển sang CPU nếu không."
-            ),
-            wraplength=700,
-        ).pack(anchor=tk.W, pady=(4, 16))
-
-        status = ttk.LabelFrame(frame, text="Trạng thái", padding=14)
-        status.pack(fill=tk.X)
-        ttk.Label(
-            status,
-            textvariable=self.status_var,
-            font=("Segoe UI", 11, "bold"),
-        ).grid(row=0, column=0, sticky=tk.W, columnspan=3)
-        ttk.Label(status, textvariable=self.model_var).grid(
-            row=1, column=0, sticky=tk.W, pady=(8, 0), columnspan=3
+        style.theme_use("clam")
+        style.configure("TFrame", background="#f3f6f6")
+        style.configure("TLabel", background="#f3f6f6", foreground="#16343c", font=("Segoe UI", 10))
+        style.configure("Card.TFrame", background="white")
+        style.configure("Card.TLabel", background="white")
+        style.configure("Title.TLabel", font=("Segoe UI", 25, "bold"))
+        style.configure(
+            "Status.TLabel", background="white", foreground="#0c756e", font=("Segoe UI", 17, "bold")
         )
-        ttk.Label(status, textvariable=self.llm_var).grid(
-            row=2, column=0, sticky=tk.W, pady=(3, 0), columnspan=3
+        style.configure("TButton", font=("Segoe UI", 10), padding=(12, 9))
+        style.configure("Accent.TButton", background="#0c756e", foreground="white")
+        style.map("Accent.TButton", background=[("active", "#105f5a")])
+        panel = ttk.Frame(self.root, padding=24)
+        panel.pack(fill="both", expand=True)
+        ttk.Label(panel, text="VietLip", style="Title.TLabel").pack(anchor="w")
+        ttk.Label(panel, text="Máy chủ đọc môi tiếng Việt  /  " + APP_VERSION).pack(anchor="w")
+        card = ttk.Frame(panel, style="Card.TFrame", padding=20)
+        card.pack(fill="x", pady=(20, 16))
+        ttk.Label(card, textvariable=self.status, style="Status.TLabel", wraplength=620).pack(
+            anchor="w"
         )
-        ttk.Label(status, text="Địa chỉ nhập trên điện thoại:").grid(
-            row=3, column=0, sticky=tk.W, pady=(10, 0)
+        ttk.Label(card, textvariable=self.detail, style="Card.TLabel", wraplength=620).pack(
+            anchor="w", pady=(8, 0)
         )
-        address_entry = ttk.Entry(
-            status,
-            textvariable=self.address_var,
+        ttk.Label(panel, text="01  Nhập địa chỉ này trong app", font=("Segoe UI", 11, "bold")).pack(
+            anchor="w"
+        )
+        lan_row = ttk.Frame(panel)
+        lan_row.pack(fill="x", pady=(12, 8))
+        self.address_box = ttk.Combobox(
+            lan_row,
+            textvariable=self.lan,
+            values=self.addresses,
             state="readonly",
-            width=38,
+            width=32,
+            font=("Segoe UI", 13),
         )
-        address_entry.grid(row=3, column=1, sticky=tk.EW, padx=(8, 8), pady=(10, 0))
-        ttk.Button(status, text="Sao chép", command=self.copy_address).grid(
-            row=3, column=2, pady=(10, 0)
-        )
-        status.columnconfigure(1, weight=1)
-
-        buttons = ttk.Frame(frame)
-        buttons.pack(fill=tk.X, pady=14)
+        self.address_box.pack(side="left", fill="x", expand=True)
         ttk.Button(
-            buttons,
-            text="Mở trang trạng thái",
-            command=lambda: webbrowser.open(LOCAL_HEALTH_URL),
-        ).pack(side=tk.LEFT)
-        ttk.Button(
-            buttons,
-            text="Mở tài liệu API",
-            command=lambda: webbrowser.open(f"http://127.0.0.1:{PORT}/docs"),
-        ).pack(side=tk.LEFT, padx=(8, 0))
-        ttk.Button(buttons, text="Dừng server", command=self.close).pack(
-            side=tk.RIGHT
+            lan_row,
+            text="Sao chép IP",
+            style="Accent.TButton",
+            command=lambda: self.copy(self.lan.get()),
+        ).pack(side="left", padx=8)
+        ttk.Button(lan_row, text="Làm mới", command=self.refresh_addresses).pack(side="left")
+        ttk.Label(panel, textvariable=self.network_status, wraplength=660).pack(
+            anchor="w", pady=(3, 14)
         )
-
-        ttk.Label(frame, text="Nhật ký", font=("Segoe UI", 10, "bold")).pack(
-            anchor=tk.W
-        )
+        ttk.Label(
+            panel, text="02  Mở VietLip → Cài đặt → Lưu và kiểm tra", font=("Segoe UI", 11, "bold")
+        ).pack(anchor="w")
+        ttk.Label(
+            panel, text="Sau đó bấm Bắt đầu live. Giữ cửa sổ này mở trong phiên.", wraplength=660
+        ).pack(anchor="w", pady=(5, 12))
         self.log_box = scrolledtext.ScrolledText(
-            frame,
-            height=14,
-            state=tk.DISABLED,
+            panel,
+            height=5,
+            state="disabled",
             font=("Consolas", 9),
-            wrap=tk.WORD,
+            wrap="word",
+            relief="flat",
+            background="#e9efef",
+            foreground="#30494f",
+            borderwidth=0,
+            padx=10,
+            pady=8,
         )
-        self.log_box.pack(fill=tk.BOTH, expand=True, pady=(5, 0))
+        self.log_box.pack(fill="both", expand=True)
+        actions = ttk.Frame(panel)
+        actions.pack(fill="x", pady=(14, 0))
+        ttk.Button(actions, text="Mở nhật ký", command=lambda: os.startfile(data_dir())).pack(
+            side="left"
+        )
+        ttk.Label(
+            actions, text="Chỉ dùng hình ảnh · phụ đề cần kiểm tra", font=("Segoe UI", 9)
+        ).pack(side="left", padx=12)
+        ttk.Button(actions, text="Đóng máy chủ", command=self.close).pack(side="right")
 
-    def _configure_logging(self) -> None:
-        log_path = data_dir() / "server.log"
-        formatter = logging.Formatter(
-            "%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-            "%Y-%m-%d %H:%M:%S",
-        )
-        root_logger = logging.getLogger()
-        root_logger.setLevel(logging.INFO)
-        root_logger.handlers.clear()
-        file_handler = logging.FileHandler(log_path, encoding="utf-8")
-        file_handler.setFormatter(formatter)
-        queue_handler = QueueLogHandler(self.log_queue)
-        queue_handler.setFormatter(formatter)
-        root_logger.addHandler(file_handler)
-        root_logger.addHandler(queue_handler)
-        self.logger = logging.getLogger("lip_reader.launcher")
-        self.logger.info("Nhật ký: %s", log_path)
+    def start(self):
+        def worker():
+            try:
+                existing = read_health(self.args.port)
+                if existing:
+                    self.events.put(("external", existing))
+                    return
+                if not port_available(self.args.port):
+                    raise RuntimeError(
+                        f"Cổng {self.args.port} đang được dùng. Đóng server cũ rồi mở lại."
+                    )
+                configure_runtime(self.args.device, self.args.trace_directory)
+                self.server = make_server(self.args.port)
+                if self.closing:
+                    return
+                self.server.run()
+                self.events.put(("stopped", None))
+            except BaseException as exc:
+                logging.exception("Không khởi động được server")
+                self.events.put(("error", str(exc)))
 
-    def start(self) -> None:
-        configure_runtime()
-        existing = read_health()
-        if existing is not None:
-            self.logger.info("Đã phát hiện Lip Reader Server đang chạy.")
-            self._show_health(existing)
-            return
-        ensure_ollama_started(self.logger)
-        self.status_var.set("Đang khởi động API và nạp checkpoint…")
-        self.owns_server = True
-        self.server_thread = threading.Thread(
-            target=self._run_server,
-            name="lip-reader-uvicorn",
-            daemon=True,
-        )
+        self.server_thread = threading.Thread(target=worker, daemon=True)
         self.server_thread.start()
 
-    def _run_server(self) -> None:
-        try:
-            import uvicorn
-            from app.main import app as fastapi_app
-
-            config = uvicorn.Config(
-                fastapi_app,
-                host=HOST,
-                port=PORT,
-                log_level="info",
-                log_config=None,
-                access_log=True,
-            )
-            self.server = uvicorn.Server(config)
-            self.server.run()
-        except Exception:
-            self.logger.exception("Server không thể khởi động.")
-            self.root.after(
-                0,
-                lambda: self.status_var.set(
-                    "Không thể khởi động server – xem nhật ký bên dưới."
-                ),
-            )
-
-    def _poll_health(self) -> None:
+    def poll(self):
         if self.closing:
             return
-        health = read_health()
-        if health is not None:
-            self._show_health(health)
-        elif self.server_thread and not self.server_thread.is_alive():
-            self.status_var.set("Server đã dừng.")
-        else:
-            self.status_var.set("Đang nạp model; lần đầu có thể mất một vài phút…")
-        self.root.after(1500, self._poll_health)
+        if not self.polling:
+            self.polling = True
 
-    def _show_health(self, health: dict) -> None:
-        status = health.get("status", "unknown")
-        loaded = bool(health.get("model_loaded"))
-        state = health.get("model_state", "unknown")
-        if status == "ok" and loaded:
-            self.status_var.set("Sẵn sàng nhận video từ điện thoại.")
-        else:
-            self.status_var.set(f"Server: {status} · model: {state}")
-        self.model_var.set(
-            "Model: "
-            f"{state} · {health.get('device', 'unknown')} "
-            f"({health.get('precision', 'unknown')})"
-        )
-        if health.get("llm_available"):
-            self.llm_var.set(f"LLM: sẵn sàng · {health.get('llm_model')}")
-        else:
-            self.llm_var.set("LLM: chưa cài hoặc chưa sẵn sàng · Visual-only vẫn dùng được")
+            def worker():
+                self.events.put(("health", read_health(self.args.port)))
 
-    def copy_address(self) -> None:
-        self.root.clipboard_clear()
-        self.root.clipboard_append(self.address_var.get())
-        self.status_var.set("Đã sao chép địa chỉ server.")
+            threading.Thread(target=worker, daemon=True).start()
+        self.root.after(1500, self.poll)
 
-    def _drain_logs(self) -> None:
-        if self.closing:
-            return
-        lines = []
-        while True:
+    def show_health(self, health):
+        if health.get("app_version") != APP_VERSION:
+            self.status.set("Đang có một server phiên bản khác")
+            self.detail.set(
+                "Đóng server cũ rồi mở lại VietLip để dùng bản đã cài. Cửa sổ này không dừng server đó."
+            )
+        elif health.get("realtime_available") and health.get("model_state") == "ready":
+            self.status.set("Sẵn sàng đọc môi")
+            device = (
+                "GPU NVIDIA"
+                if str(health.get("device", "")).startswith("cuda")
+                else "CPU · sẽ chậm hơn GPU"
+            )
+            self.detail.set(f"{device}  ·  Mô hình đã nạp  ·  Tự nhận khoảng ngừng nói")
+        elif health.get("last_error"):
+            self.status.set("Chưa thể đọc môi")
+            self.detail.set(health["last_error"])
+        else:
+            self.status.set("Đang nạp mô hình…")
+
+    def drain(self):
+        for _ in range(100):
             try:
-                lines.append(self.log_queue.get_nowait())
+                kind, value = self.events.get_nowait()
             except queue.Empty:
                 break
-        if lines:
-            self.log_box.configure(state=tk.NORMAL)
-            self.log_box.insert(tk.END, "\n".join(lines) + "\n")
-            self.log_box.see(tk.END)
-            self.log_box.configure(state=tk.DISABLED)
-        self.root.after(250, self._drain_logs)
+            if kind == "log":
+                self.log_box.configure(state="normal")
+                self.log_box.insert("end", value + "\n")
+                if int(self.log_box.index("end-1c").split(".")[0]) > 500:
+                    self.log_box.delete("1.0", "101.0")
+                self.log_box.see("end")
+                self.log_box.configure(state="disabled")
+            elif kind in ("health", "external"):
+                self.polling = False
+                if value:
+                    self.show_health(value)
+            elif kind == "error":
+                self.status.set("Không khởi động được máy chủ")
+                self.detail.set(value)
+            elif kind == "stopped" and not self.closing:
+                self.status.set("Máy chủ đã dừng")
+        if not self.closing:
+            self.root.after(150, self.drain)
 
-    def close(self) -> None:
+    def refresh_addresses(self):
+        self.addresses = local_addresses(self.args.port)
+        self.address_box.configure(values=self.addresses)
+        self.lan.set(self.addresses[0] if self.addresses else "Chưa có địa chỉ mạng nội bộ")
+        self.network_status.set("Đã cập nhật IP. Nếu đổi Wi-Fi, nhập lại địa chỉ mới trong app.")
+
+    def copy(self, value):
+        self.root.clipboard_clear()
+        self.root.clipboard_append(value)
+        self.network_status.set(f"Đã sao chép: {value}")
+
+    def close(self):
         if self.closing:
             return
         self.closing = True
-        if self.owns_server and self.server is not None:
-            self.status_var.set("Đang dừng server…")
+        if self.server:
             self.server.should_exit = True
-            deadline = time.time() + 8
-            while (
-                self.server_thread
-                and self.server_thread.is_alive()
-                and time.time() < deadline
-            ):
-                self.root.update_idletasks()
-                time.sleep(0.1)
         self.root.destroy()
 
-    def run(self) -> None:
+    def run(self):
         self.root.mainloop()
 
 
-def main() -> int:
-    try:
-        ServerWindow().run()
-        return 0
-    except Exception as exc:
+def main():
+    parser = argparse.ArgumentParser(description=APP_NAME)
+    parser.add_argument("--headless", action="store_true")
+    parser.add_argument("--port", type=int, default=7100)
+    parser.add_argument("--device", choices=["auto", "cuda", "cpu"], default="auto")
+    parser.add_argument("--trace-directory", default="")
+    args = parser.parse_args()
+    if not 1024 <= args.port <= 65535:
+        parser.error("port must be between 1024 and 65535")
+    if args.headless:
+        configure_logging()
+        if not port_available(args.port):
+            raise RuntimeError(f"Port {args.port} is already in use")
+        configure_runtime(args.device, args.trace_directory)
+        make_server(args.port).run()
+    else:
         try:
-            messagebox.showerror(APP_NAME, f"Không thể mở server:\n{exc}")
-        except Exception:
-            pass
-        return 1
+            ServerWindow(args).run()
+        except Exception as exc:
+            messagebox.showerror(APP_NAME, str(exc))
+            raise
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

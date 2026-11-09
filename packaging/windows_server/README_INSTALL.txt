@@ -1,45 +1,41 @@
-LIP READER SERVER 1.1.0 - HUONG DAN SU DUNG
-============================================
+VIETLIP SERVER 1.6.0 — ĐỌC MÔI TIẾNG VIỆT
 
-KHOI DONG
----------
-1. Mo "Lip Reader Server" va doi den khi hien "San sang nhan video".
-2. Dien thoai va may tinh can o cung mang Wi-Fi.
-3. Tren app Android, vao Cai dat va nhap dia chi LAN ma cua so server hien ra.
-4. Bam "Luu va kiem tra".
-5. Quay hoac chon video 2-12 giay, thay ro mat va mieng.
+1. Cài VietLip Server bằng file Setup.exe. Giữ tất cả file .bin cạnh Setup.exe.
+   Bộ cài đã có Python 3.11, runtime CPU/CUDA và mô hình SO17. Không tải thêm model.
+2. Mở VietLip Server trong Start Menu. Chờ “Sẵn sàng đọc môi”.
+3. Kết nối điện thoại Android và PC cùng mạng Wi-Fi / LAN.
+4. Cài VietLip-1.6.0.apk trên điện thoại. Mở Cài đặt, nhập IP được server hiển thị
+   (có thể chỉ nhập IP; app tự dùng http và cổng 7100), rồi Lưu và kiểm tra.
+5. Trở về Đọc môi, bấm Bắt đầu live. Giữ máy dọc, mặt đủ sáng, nói từng câu.
+   Hệ thống tự chốt đoạn khi thấy khoảng ngừng. Kết thúc phiên để lưu bản ghi.
 
-PHU DE TRUC TIEP
-----------------
-- Bat "Phu de truc tiep" tren app de xem chu cap nhat khi dang noi.
-- Server dung cua so 6 giay chong lan 1 giay va noi tung doan thanh transcript lien tuc.
-- CPU van hoat dong; lan dau co the cham do nap model, cac lan sau nhanh hon.
-- Phien toi da 5 phut va khong dung LLM. Full-clip toi da 45 giay la luong doc lap.
+KẾT NỐI KHÔNG DÂY
+- Ví dụ địa chỉ: http://192.168.1.20:7100. IP của mỗi PC sẽ khác.
+- IP có thể thay đổi khi đổi Wi-Fi hoặc khởi động lại router. Bấm Làm mới trên
+  server và cập nhật địa chỉ trong app nếu cần.
+- Cùng tên Wi-Fi chưa bảo đảm các thiết bị liên lạc được. Mạng khách/công cộng
+  có thể chặn kết nối giữa thiết bị; dùng mạng nội bộ cho phép kết nối ngang hàng.
+- Nếu Windows hỏi quyền mạng, cho phép VietLip/Python trên mạng nội bộ tin cậy.
+  Khi firewall chặn, quản trị viên cần cho phép TCP 7100 từ mạng cục bộ tới
+  runtime\pythonw.exe. Không cần tắt firewall hoặc mở cổng Internet.
+- Server hiện rõ khi có phiên bản khác đang chạy trên cổng 7100. Đóng server cũ
+  rồi mở lại bản mới; app không tự tắt chương trình khác.
 
-CHE DO XU LY
-------------
-- Thuan chuyen dong moi: luon san sang, khong can LLM.
-- Ngu canh gioi han: LLM chi chon mot cau co san trong N-best.
-- Tro ly dien giai: tao ban dien giai rieng va giu nguyen ket qua thi giac.
-- Hai che do LLM can thanh phan Ollama + Qwen duoc chon luc cai dat.
-- LLM chi nhan N-best va ngu canh chu; video khong duoc gui cho LLM.
+PHẦN CỨNG VÀ GIỚI HẠN
+- Windows 10/11 x64, RAM khuyến nghị 16 GB, khoảng 6 GB trống để cài.
+- Ưu tiên GPU NVIDIA và driver tương thích CUDA 12.6. CPU có thể chạy nhưng
+  chậm hơn; không bảo đảm độ trễ 2–3 giây trên mọi cấu hình.
+- Nhận dạng chỉ dùng hình ảnh. Video lưu trên điện thoại có tiếng để đối chiếu.
+- Đây là bản thử nghiệm, vẫn nhận sai đáng kể khi nói tự do. Cần kiểm tra phụ đề.
+- Giữ cửa sổ server mở; đóng cửa sổ sẽ dừng server do cửa sổ đó khởi động.
+- Nhật ký: %LOCALAPPDATA%\VietLip\logs. Không cần LLM hoặc API key.
+- Quyền của mã nguồn/tài sản bên thứ ba được giữ trong server\vendor\licenses,
+  server\assets và runtime\Lib\site-packages. Bộ cài dành cho thử nghiệm nội bộ;
+  chưa xác nhận quyền thương mại của toàn bộ dữ liệu và mô hình.
 
-PHAN CUNG
----------
-- Khong co GPU van chay duoc bang CPU float32; toc do se cham hon.
-- Lan khoi dong dau tien co the mat vai phut de nap checkpoint.
-- Qwen2.5:7b tai them khoang 4.7 GB va can RAM phu hop.
-
-VAN HANH AN TOAN
-----------------
-- Luon kiem tra ket qua truoc khi su dung.
-- Ket noi HTTP chi danh cho mang LAN tin cay; trien khai cong khai can HTTPS.
-- Video tam duoc xoa sau khi xu ly; video khong duoc gui sang LLM.
-- Ung dung gui job bat dong bo, tu dong cho trong hang doi va co the huy job.
-- Bo cai va APK dung chu ky phan phoi noi bo. Phat hanh rong can chu ky thuong mai.
-- Tai san mean-face can duoc cap quyen hoac thay the truoc muc dich thuong mai.
-
-NHAT KY
--------
-%LOCALAPPDATA%\Lip Reader Server\server.log
-%LOCALAPPDATA%\Lip Reader Server\llm-install.log
+KIỂM TRA / GỠ CÀI ĐẶT
+- API health: http://IP-CUA-PC:7100/healthz.
+- Công cụ kiểm file (PowerShell tại thư mục đã cài):
+  .\runtime\python.exe .\verify_bundle.py
+- Gỡ VietLip Server từ Windows Settings > Apps. Bản ghi điện thoại và các project
+  khác không bị tác động. Nhật ký local được giữ để đối chiếu.

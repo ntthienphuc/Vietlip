@@ -1,92 +1,63 @@
-# LipLens — đọc môi tiếng Việt · 1.5.0
+# VietLip 1.6.0
 
-Repository riêng: [ntthienphuc/liplens-app](https://github.com/ntthienphuc/liplens-app).
+Ứng dụng Android đọc môi tiếng Việt qua camera, kết nối không dây tới server
+Windows trong cùng mạng nội bộ. Server hiển thị IP; người dùng nhập IP trong
+**Cài đặt → Lưu và kiểm tra**. Phụ đề live chỉ dùng hình ảnh. Video lưu có âm
+thanh để đối chiếu khi thử nghiệm.
 
-Ứng dụng Android dùng camera và máy chủ suy luận trên PC. Phụ đề live **chỉ dùng
-hình ảnh**; video lưu trên điện thoại có âm thanh để đối chiếu khi kiểm thử.
-Tự phát hiện chuyển động môi và khoảng ngừng, tiếp tục nhận câu mới mà không cần
-bấm “Xong câu”. Đã thử trên Samsung SM-G965F / Android 10. Bản iPhone chưa được
-build hoặc kiểm chứng.
+**Bộ cài local:** `C:\Users\thien\Downloads\VietLip-1.6.0`.
+Mở `BAT_DAU.txt` trong thư mục đó để cài server và APK.
 
-**Hiện vẫn là ứng dụng thử nghiệm: chưa đọc câu nói tự do với độ chính xác cao.**
-Đợt so sánh mới giữ SO17 làm mặc định; bốn câu điện thoại được xác nhận vẫn có
-57,50% WER khi phát lại với mốc cửa sổ cố định. Tốc độ cập nhật không bảo đảm câu
-đúng. Xem [kết quả chọn checkpoint](docs/CHECKPOINT_SELECTION_2026-11-09.md).
+## Dùng bộ cài
 
-## Giao diện và luồng sử dụng
+1. Chạy `02-Server-Windows/VietLip-Server-Setup-1.6.0.exe`; giữ các file `.bin`
+   bên cạnh. Bộ cài có sẵn Python, thư viện CPU/CUDA và checkpoint SO17.
+2. Mở **VietLip Server** từ Start Menu và chờ **Sẵn sàng đọc môi**.
+3. Cài `01-Android/VietLip-1.6.0.apk` lên Android. Cập nhật trực tiếp để giữ
+   lịch sử trên thiết bị.
+4. PC và điện thoại kết nối cùng mạng Wi-Fi/LAN có cho phép liên lạc giữa
+   thiết bị. Nhập IP server trong app, kiểm tra, rồi **Bắt đầu live**.
 
-- Preview dọc lớn, hiển thị trọn hình đúng tỷ lệ; có viền trống khi tỷ lệ camera
-  khác màn hình. Hướng và lật ảnh theo CameraX, cả trước và trong khi quay.
-- Live ưu tiên camera và phụ đề, ẩn thanh điều hướng. Chữ lớn; phần gạch dưới còn
-  được cập nhật, phần đã chốt được giữ theo cơ chế đồng thuận giữa các cửa sổ.
-- Nút mở rộng xem/sao chép toàn bộ phụ đề. Thông số camera nằm trong “Thông tin
-  phiên”; tuỳ chọn quay và hướng dẫn nằm trong nút ba chấm.
-- Cỡ chữ lớn và màn hình nhỏ có thể cuộn; lịch sử tự cập nhật khi phiên mới được
-  lưu. Bản ghi từ công cụ phát lại được ghi rõ “Kiểm thử phát lại”.
-- App báo trạng thái kết nối, thiếu mặt, hình tối và mất luồng; không im lặng chờ
-  vô hạn. Camera vẫn có thể ghi lại nhai/cười thành hoạt động môi.
+Mạng khách có thể tách thiết bị dù cùng SSID. Nếu kết nối thất bại, kiểm tra IP,
+cổng 7100, quyền mạng của server và cấu hình router. Không cần tài khoản cloud
+hay LLM/API key. Xem hướng dẫn trong
+[`packaging/windows_server/README_INSTALL.txt`](packaging/windows_server/README_INSTALL.txt).
 
-## Chạy trên máy đã chuẩn bị
+## Giao diện và hành vi
 
-```powershell
-cd E:\Project\Lip_App\lip_reader
-.\server\run_realtime.ps1
-```
+- Tên và biểu tượng VietLip; nền sáng, màu xanh ngọc, preview dọc lớn.
+- Ảnh dùng tỷ lệ gốc và `BoxFit.contain`, không bóp mặt; guide theo vùng hình.
+- Phụ đề có vùng riêng, chữ lớn, phần tạm gạch dưới. Mở rộng để xem/sao chép
+  toàn phiên. Điều hướng ẩn khi đang live.
+- Tự theo dõi chuyển động môi và khoảng ngừng để chốt đoạn. Nhai/cười vẫn có
+  thể bị nhầm thành hoạt động nói; phụ đề tự động cần kiểm tra.
+- Cài đặt nhận IP có hoặc không có `http://`; mặc định cổng 7100. Nút kiểm
+  tra có thời hạn chờ, server chỉ báo sẵn sàng khi mô hình đã chuẩn bị xong.
+- Lịch sử cục bộ tự cập nhật; chữ lớn/màn hình nhỏ có thể cuộn.
 
-Chờ `/healthz` báo `model_state: ready`. Cấu hình hiện tại: SO17, CUDA nếu có,
-float32, live beam 3 / CTC 0.1, cửa sổ 6 giây, bước 1,5 giây, camera nhắm 25 fps.
-Không cần LLM hoặc API key. Phoneme/LLM và checkpoint trộn tắt mặc định.
+## Mô hình và giới hạn
 
-Qua USB, cắm điện thoại đã cho phép gỡ lỗi rồi chạy:
+Giữ **SO17 native, float32, beam 3 / CTC 0.1, 25 fps, cửa sổ 6 giây và bước
+1,5 giây**. Nhánh âm vị, LLM và checkpoint trộn không bật mặc định.
 
-```powershell
-.\tools\connect_android_usb.ps1
-```
+Ứng dụng vẫn là bản thử nghiệm, **chưa đạt độ chính xác cao với câu nói tự do**.
+Video điện thoại bốn câu có WER 57,50% trong phép phát lại gần đây; đóng gói và
+đổi UI không phải cải thiện độ chính xác. GPU được ưu tiên; CPU chạy được nhưng
+không bảo đảm realtime. Android đã được build/test; chưa kiểm chứng iPhone.
 
-Trong Cài đặt, dùng `http://127.0.0.1:7100`, bấm **Lưu và kiểm tra**. Giữ cáp
-trong phiên. Đây là đường kết nối đã kiểm chứng. Wi-Fi dùng địa chỉ IPv4 của PC
-và cần máy chủ được phép nhận kết nối trên mạng đó; việc cùng Wi-Fi chưa đủ.
-Android emulator dùng `http://10.0.2.2:7100`.
+## Bảo trì
 
-Trở về Đọc môi, **Bắt đầu live**, nhìn gần chính diện và nói tự nhiên từng câu.
-**Kết thúc phiên** lưu video và phụ đề. Live tối đa 5 phút; gửi một video để xử lý
-đầy đủ tối đa 45 giây. Video MP4 nằm trong dữ liệu app, có thể mất nếu gỡ ứng dụng.
+- [Sơ đồ thư mục và cách tạo bộ cài](docs/PROJECT_MAP.md).
+- [Kiến trúc ứng dụng/server](docs/ARCHITECTURE.md).
+- [Kiểm chứng bộ cài VietLip 1.6.0](docs/RELEASE_1_6_0_2026-11-09.md).
+- [Chọn checkpoint](docs/CHECKPOINT_SELECTION_2026-11-09.md).
+- [Bản 1.5 và các phép đo phụ đề](docs/RELEASE_1_5_0_2026-11-09.md).
 
-## Cài đặt từ một checkout mới
+Chạy từ source đã chuẩn bị: `server/run_realtime.ps1`. Build Android có ký:
+`build_android.ps1 -Mode release`. Build installer và kiểm tra runtime theo
+`packaging/windows_server/README.md`. Không đưa model, khóa ký, video hay thư
+mục build vào Git. Mã nguồn của bên thứ ba và license được giữ cùng project.
 
-Đã dùng Python 3.11, Flutter 3.44 / Dart 3.12, Android SDK và JDK 21 ở máy này.
-Model, video, khóa ký và kết quả chạy lớn không nằm trong Git. **Clone mã nguồn
-chưa đủ để suy luận:** cần checkpoint SO17 được cấp riêng, có hash trong
-`server/models/MODEL_MANIFEST.json`.
-
-```powershell
-.\server\setup_server.ps1 -Runtime gpu  # hoặc cpu
-.\tools\import_model.ps1 -SourcePath 'C:\path\to\SO_seed17.pt'
-.\build_android.ps1 -Mode profile -OutputDir output
-```
-
-Bản profile AOT dùng để kiểm thử local. Để cập nhật bản đang cài có chữ ký nội bộ,
-dùng `tools/sign_device_apk.ps1` với khóa ký local hiện có; không gỡ app để đổi
-chữ ký vì sẽ mất dữ liệu. iOS yêu cầu môi trường và kiểm thử riêng.
-
-## Kiểm chứng và giới hạn
-
-- [Bàn giao 1.5.0: UI, máy thật và thời gian dựng phụ đề](docs/RELEASE_1_5_0_2026-11-09.md).
-- [Kiến trúc, cách bảo trì và các lệnh kiểm tra](docs/ARCHITECTURE.md).
-- [Chọn cấu hình sau thử bảy checkpoint và các bản trộn](docs/CHECKPOINT_SELECTION_2026-11-09.md).
-- [Âm vị trực tiếp và video bốn câu](docs/DIRECT_PHONEME_2026-11-09.md).
-- [Nhánh âm vị theo cửa sổ dở câu](docs/PHONEME_WINDOWS_2026-11-07.md).
-- [Các phương pháp đã xem xét](docs/APP_METHOD_REVIEW_2026-11-09.md).
-- [Kết nối / phục hồi](docs/CONNECTION_RECOVERY_2026-11-06.md),
-  [chốt phụ đề](docs/CAPTION_STABILITY_2026-11-06.md),
-  [ghi âm tham chiếu và từ vựng](docs/AUDIO_OPEN_VOCABULARY_2026-11-06.md).
-
-Mục tiêu là phụ đề khoảng 2–3 giây sau câu. Thời gian xử lý server, thời điểm
-Flutter dựng chữ và thời điểm thực sự nói xong là ba mốc khác nhau; các báo cáo
-nêu rõ mốc đo, không coi chúng tương đương. Camera có thể có khoảng hụt hình lúc
-bắt đầu phiên; hệ thống ghi lại khoảng hụt và phần chưa nhận dạng được.
-
-Nguồn và điều kiện sử dụng giữ tại `server/vendor/licenses`,
-`packages/camera_android_camerax/LICENSE` và `server/assets/README.md`.
-Đây chưa phải một bản phát hành thương mại. Tài liệu cũ được giữ trong `docs`;
-chúng mô tả từng bản thử nghiệm và không thay thế cấu hình hiện tại.
+Các bản xuất cũ chuyển vào `output/archive/pre_vietlip_1_6`; script bộ cài cũ
+chuyển vào `packaging/legacy_windows_server_1_1`. Video, bằng chứng, model và
+thử nghiệm cũ được giữ để đối chiếu; chúng không nằm trong bộ cài người dùng.
