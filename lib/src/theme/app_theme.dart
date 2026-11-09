@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 abstract final class AppColors {
-  static const ink = Color(0xFF102A43);
-  static const muted = Color(0xFF627D98);
-  static const canvas = Color(0xFFF4F8FB);
+  static const ink = Color(0xFF1A292B);
+  static const muted = Color(0xFF687777);
+  static const canvas = Color(0xFFF5F7F6);
   static const surface = Color(0xFFFFFFFF);
-  static const primary = Color(0xFF006D77);
-  static const primarySoft = Color(0xFFD9F3F1);
+  static const primary = Color(0xFF21665E);
+  static const primarySoft = Color(0xFFE0EFEB);
   static const accent = Color(0xFFFF8A5B);
   static const warning = Color(0xFFF59E0B);
   static const warningSoft = Color(0xFFFFF3D6);
   static const error = Color(0xFFC2413B);
-  static const border = Color(0xFFD7E3EA);
+  static const border = Color(0xFFE1E7E4);
 }
 
 abstract final class AppTheme {
@@ -39,6 +39,7 @@ abstract final class AppTheme {
         systemOverlayStyle: SystemUiOverlayStyle.dark,
       ),
       cardTheme: CardThemeData(
+        margin: EdgeInsets.zero,
         color: AppColors.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(

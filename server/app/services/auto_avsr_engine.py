@@ -147,9 +147,7 @@ class AutoAvsrEngine:
                 return normalized
             if allow_cpu_fallback:
                 return "cpu"
-            raise RuntimeError(
-                "CUDA không khả dụng và LIP_ALLOW_CPU_FALLBACK=false."
-            )
+            raise RuntimeError("CUDA không khả dụng và LIP_ALLOW_CPU_FALLBACK=false.")
         raise ValueError("LIP_DEVICE phải là auto, cpu hoặc cuda[:index].")
 
     def _model_args(self) -> Namespace:
@@ -197,17 +195,11 @@ class AutoAvsrEngine:
         result.diagnostics["runtime"] = {
             "device": self.device_label,
             "precision": self.effective_precision,
-            "cpu_threads": (
-                self._torch.get_num_threads()
-                if self.device_label == "cpu"
-                else None
-            ),
+            "cpu_threads": (self._torch.get_num_threads() if self.device_label == "cpu" else None),
             "model_load_ms": self._load_elapsed_ms,
             "preprocess_ms": preprocess_ms,
             "decode_ms": decode_ms,
-            "total_engine_ms": round(
-                (time.perf_counter() - total_started) * 1000
-            ),
+            "total_engine_ms": round((time.perf_counter() - total_started) * 1000),
         }
         return result
 
@@ -238,9 +230,7 @@ class AutoAvsrEngine:
             "precision": self.effective_precision,
             "preprocess_ms": preprocess_ms,
             "decode_ms": decode_ms,
-            "total_engine_ms": round(
-                (time.perf_counter() - total_started) * 1000
-            ),
+            "total_engine_ms": round((time.perf_counter() - total_started) * 1000),
         }
         return result
 
@@ -259,22 +249,13 @@ class AutoAvsrEngine:
             hypotheses = model.beam_search(encoded)
             selected = [
                 hypothesis.asdict()
-                for hypothesis in hypotheses[
-                    : min(len(hypotheses), self.settings.nbest)
-                ]
+                for hypothesis in hypotheses[: min(len(hypotheses), self.settings.nbest)]
             ]
-            log_prob = model.model.ctc.log_softmax(encoded.unsqueeze(0)).squeeze(0)
 
         alternatives = []
         for hypothesis in selected:
-            token_ids = torch.tensor(
-                [int(value) for value in hypothesis["yseq"][1:]]
-            )
-            text = (
-                model.text_transform.post_process(token_ids)
-                .replace("<eos>", "")
-                .strip()
-            )
+            token_ids = torch.tensor([int(value) for value in hypothesis["yseq"][1:]])
+            text = model.text_transform.post_process(token_ids).replace("<eos>", "").strip()
             alternatives.append(
                 {
                     "text": text,
@@ -288,9 +269,7 @@ class AutoAvsrEngine:
             "ctc_weight": self.settings.ctc_weight,
             "nbest_count": len(alternatives),
             "top1_top2_raw_margin": (
-                round(raw_scores[0] - raw_scores[1], 6)
-                if len(raw_scores) > 1
-                else None
+                round(raw_scores[0] - raw_scores[1], 6) if len(raw_scores) > 1 else None
             ),
             "nbest_relative_entropy": self._relative_entropy(raw_scores),
             "scores_are_calibrated_probabilities": False,
@@ -322,7 +301,6 @@ class AutoAvsrEngine:
         total = sum(weights)
         probabilities = [value / total for value in weights]
         entropy = -sum(
-            probability * math.log(max(probability, 1e-12))
-            for probability in probabilities
+            probability * math.log(max(probability, 1e-12)) for probability in probabilities
         )
         return round(entropy / math.log(len(probabilities)), 6)

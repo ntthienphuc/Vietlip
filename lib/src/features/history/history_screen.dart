@@ -17,8 +17,32 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   late Future<List<TranscriptionResult>> _future = widget.history.list();
 
+  @override
+  void initState() {
+    super.initState();
+    widget.history.addListener(_reload);
+  }
+
+  @override
+  void didUpdateWidget(covariant HistoryScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.history != widget.history) {
+      oldWidget.history.removeListener(_reload);
+      widget.history.addListener(_reload);
+      _future = widget.history.list();
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.history.removeListener(_reload);
+    super.dispose();
+  }
+
   void _reload() {
-    setState(() => _future = widget.history.list());
+    setState(() {
+      _future = widget.history.list();
+    });
   }
 
   @override
@@ -55,7 +79,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 );
                 if (confirmed == true) {
                   await widget.history.clear();
-                  _reload();
                 }
               },
               icon: const Icon(Icons.delete_outline),
@@ -107,7 +130,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                       subtitle: Text(
-                        '${_formatDate(item.createdAt)} · ${item.numFrames} khung hình',
+                        '${item.modelId.startsWith('QA-prerecorded-') ? 'Kiểm thử phát lại · ' : ''}'
+                        '${_formatDate(item.createdAt)}',
                       ),
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => context.push('/result', extra: item),

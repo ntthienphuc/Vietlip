@@ -30,6 +30,8 @@
 	<string>Ứng dụng cần camera để quay chuyển động môi cho nhận dạng tiếng Việt.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Ứng dụng cần quyền chọn video có sẵn để đọc chuyển động môi.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Lưu tiếng nói trong video để đối chiếu bản thử nghiệm. Phụ đề đọc môi chỉ sử dụng hình ảnh.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Ứng dụng kết nối tới máy chủ nhận dạng trong mạng nội bộ.</string>
 	<key>NSAppTransportSecurity</key>

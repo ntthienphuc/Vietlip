@@ -33,6 +33,9 @@ from .schemas import (
     TranscriptionResponse,
 )
 from .services.auto_avsr_engine import AutoAvsrEngine
+from .services.native_engine import NativeAvsrEngine
+from .services.startup import prepare_engine
+from .services.streaming_session import run_stream
 from .services.engine import InferenceEngine
 from .services.llm_postprocessor import (
     LlmPostprocessor,
@@ -56,7 +59,11 @@ def create_app(
     llm: Optional[LlmPostprocessor] = None,
 ) -> FastAPI:
     config = settings or Settings.from_env()
-    inference_engine = engine or AutoAvsrEngine(config)
+    inference_engine = engine or (
+        NativeAvsrEngine(config)
+        if config.model_backend == "native_avsr"
+        else AutoAvsrEngine(config)
+    )
     llm_processor = llm or create_llm_postprocessor(config)
 
     @asynccontextmanager
@@ -70,11 +77,15 @@ def create_app(
         app.state.job_worker_task = asyncio.create_task(_job_worker(app))
         if config.model_load_on_startup:
             try:
-                await asyncio.to_thread(inference_engine.load)
+                await asyncio.to_thread(
+                    prepare_engine,
+                    inference_engine,
+                    warmup=os.getenv("LIP_STARTUP_WARMUP", "0") == "1",
+                )
             except Exception:
                 # Health reports the real model error while the API remains
                 # available for diagnosis.
-                pass
+                logger.exception("Model startup preparation failed")
         try:
             yield
         finally:
@@ -131,9 +142,7 @@ def create_app(
 
     @app.middleware("http")
     async def attach_request_id(request: Request, call_next):
-        request.state.request_id = (
-            request.headers.get("x-request-id") or uuid.uuid4().hex
-        )[:128]
+        request.state.request_id = (request.headers.get("x-request-id") or uuid.uuid4().hex)[:128]
         response = await call_next(request)
         response.headers["x-request-id"] = request.state.request_id
         response.headers["cache-control"] = "no-store"
@@ -160,22 +169,11 @@ def create_app(
             llm_model=app.state.llm.model_label,
             last_error=current_engine.last_error,
             queued_jobs=app.state.job_queue.qsize(),
-            active_job=any(
-                item.get("status") == "processing"
-                for item in app.state.jobs.values()
-            ),
+            active_job=any(item.get("status") == "processing" for item in app.state.jobs.values()),
             job_capacity=config.max_queued_jobs,
             realtime_available=config.realtime_enabled,
-            realtime_mode=(
-                "continuous_visual_captions"
-                if config.realtime_enabled
-                else None
-            ),
-            realtime_max_seconds=(
-                config.realtime_max_seconds
-                if config.realtime_enabled
-                else None
-            ),
+            realtime_mode=("continuous_visual_captions" if config.realtime_enabled else None),
+            realtime_max_seconds=(config.realtime_max_seconds if config.realtime_enabled else None),
         )
 
     @app.websocket("/v1/realtime")
@@ -323,9 +321,7 @@ def create_app(
 
                     if full_segment:
                         snapshot_end = segment_start + window_frames
-                        snapshot = list(
-                            frame_payloads[segment_start:snapshot_end]
-                        )
+                        snapshot = list(frame_payloads[segment_start:snapshot_end])
                         kind = "segment"
                     elif finishing:
                         if available < min_frames:
@@ -347,18 +343,14 @@ def create_app(
                         if (
                             available < min_frames
                             or total <= last_partial_end
-                            or now - last_decode_started
-                            < config.realtime_decode_interval_seconds
+                            or now - last_decode_started < config.realtime_decode_interval_seconds
                         ):
                             break
                         snapshot_end = total
                         snapshot = list(frame_payloads[segment_start:total])
                         kind = "partial"
 
-                    if (
-                        last_window_start == segment_start
-                        and last_window_end == snapshot_end
-                    ):
+                    if last_window_start == segment_start and last_window_end == snapshot_end:
                         decoded = (last_window_text, 0)
                     else:
                         last_decode_started = time.monotonic()
@@ -419,16 +411,11 @@ def create_app(
                                 "transcript": transcript.preview(window_text),
                                 "committed_transcript": transcript.text,
                                 "window_transcript": local["transcript"],
-                                "stable_transcript": transcript.preview(
-                                    local["stable_transcript"]
-                                ),
-                                "provisional_transcript": local[
-                                    "provisional_transcript"
-                                ],
+                                "stable_transcript": transcript.preview(local["stable_transcript"]),
+                                "provisional_transcript": local["provisional_transcript"],
                                 "frame_count": received_frames,
                                 "source_seconds": round(
-                                    received_frames
-                                    / config.realtime_sample_fps,
+                                    received_frames / config.realtime_sample_fps,
                                     2,
                                 ),
                                 "elapsed_ms": elapsed_ms,
@@ -478,6 +465,11 @@ def create_app(
                 websocket.receive_json(),
                 timeout=10,
             )
+            if first.get("type") == "start" and first.get("protocol") == 2:
+                await run_stream(
+                    websocket, config, app.state.engine, app.state.inference_semaphore, first
+                )
+                return
             if first.get("type") != "start":
                 await send_json(
                     {
@@ -494,9 +486,7 @@ def create_app(
                     "session_id": session_id,
                     "sample_fps": config.realtime_sample_fps,
                     "min_seconds": config.realtime_min_seconds,
-                    "decode_interval_seconds": (
-                        config.realtime_decode_interval_seconds
-                    ),
+                    "decode_interval_seconds": (config.realtime_decode_interval_seconds),
                     "window_seconds": config.realtime_window_seconds,
                     "overlap_seconds": config.realtime_overlap_seconds,
                     "max_seconds": config.realtime_max_seconds,
@@ -616,8 +606,7 @@ def create_app(
                 result.diagnostics["llm"] = {
                     "status": "error",
                     "message": (
-                        "Không gọi được LLM; bản thuần chuyển động môi "
-                        "vẫn được giữ nguyên."
+                        "Không gọi được LLM; bản thuần chuyển động môi vẫn được giữ nguyên."
                     ),
                 }
 
@@ -631,13 +620,9 @@ def create_app(
             created_at=datetime.now(timezone.utc),
             alternatives=result.alternatives,
             processing_mode=mode,
-            assisted_transcript=(
-                llm_result.assisted_transcript if llm_result else None
-            ),
+            assisted_transcript=(llm_result.assisted_transcript if llm_result else None),
             consensus_transcript=(
-                str(consensus["candidate_text"])
-                if consensus is not None
-                else None
+                str(consensus["candidate_text"]) if consensus is not None else None
             ),
             risk_notice=(
                 "LLM chỉ chọn trong N-best; vẫn có thể chọn sai."
@@ -665,9 +650,7 @@ def create_app(
                 status_code=422,
                 detail={
                     "code": "context_too_long",
-                    "message": (
-                        f"Ngữ cảnh tối đa {config.max_context_chars} ký tự."
-                    ),
+                    "message": (f"Ngữ cảnh tối đa {config.max_context_chars} ký tự."),
                     "request_id": resolved_request_id,
                 },
             )
@@ -687,9 +670,7 @@ def create_app(
                     status_code=422,
                     detail={
                         "code": "llm_risk_not_accepted",
-                        "message": (
-                            "Vui lòng xác nhận bạn sẽ kiểm tra kết quả hỗ trợ từ LLM."
-                        ),
+                        "message": ("Vui lòng xác nhận bạn sẽ kiểm tra kết quả hỗ trợ từ LLM."),
                         "request_id": resolved_request_id,
                     },
                 )
@@ -698,9 +679,7 @@ def create_app(
                     status_code=422,
                     detail={
                         "code": "context_required",
-                        "message": (
-                            "Chế độ có LLM cần một chủ đề hoặc ngữ cảnh do bạn nhập."
-                        ),
+                        "message": ("Chế độ có LLM cần một chủ đề hoặc ngữ cảnh do bạn nhập."),
                         "request_id": resolved_request_id,
                     },
                 )
@@ -761,9 +740,7 @@ def create_app(
         except HTTPException:
             raise
         except Exception as exc:
-            logger.exception(
-                "Inference failed for request_id=%s", resolved_request_id
-            )
+            logger.exception("Inference failed for request_id=%s", resolved_request_id)
             raise HTTPException(
                 status_code=503,
                 detail={
@@ -847,10 +824,7 @@ def create_app(
                     job["status"] = "failed"
                     job["error"] = ErrorDetail(
                         code=str(detail.get("code") or "request_failed"),
-                        message=str(
-                            detail.get("message")
-                            or "Không thể xử lý video đã gửi."
-                        ),
+                        message=str(detail.get("message") or "Không thể xử lý video đã gửi."),
                         request_id=job["request_id"],
                     )
                 except Exception as exc:
@@ -905,9 +879,7 @@ def create_app(
                 status_code=429,
                 detail={
                     "code": "job_queue_full",
-                    "message": (
-                        "Hàng đợi đang đầy. Vui lòng chờ một lượt xử lý hoàn tất."
-                    ),
+                    "message": ("Hàng đợi đang đầy. Vui lòng chờ một lượt xử lý hoàn tất."),
                     "request_id": resolved_request_id,
                 },
             )
@@ -1016,9 +988,7 @@ async def _save_upload(upload: UploadFile, *, max_bytes: int) -> Path:
                         status_code=413,
                         detail={
                             "code": "upload_too_large",
-                            "message": (
-                                f"Video vượt giới hạn {max_bytes // (1024 * 1024)} MB."
-                            ),
+                            "message": (f"Video vượt giới hạn {max_bytes // (1024 * 1024)} MB."),
                         },
                     )
                 handle.write(chunk)

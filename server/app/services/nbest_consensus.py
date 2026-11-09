@@ -40,10 +40,7 @@ def summarize_nbest(alternatives: list[dict[str, Any]]) -> dict[str, Any] | None
     score-derived weights. It is evidence for review, not a calibrated
     confidence and never replaces the primary transcript.
     """
-    candidates = [
-        item for item in alternatives
-        if str(item.get("text") or "").strip()
-    ]
+    candidates = [item for item in alternatives if str(item.get("text") or "").strip()]
     if not candidates:
         return None
 

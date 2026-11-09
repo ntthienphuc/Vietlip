@@ -1,6 +1,6 @@
 param(
-    [ValidateSet("debug", "release")]
-    [string]$Mode = "release",
+    [ValidateSet("debug", "profile", "release")]
+    [string]$Mode = "debug",
     [string]$OutputDir = "",
     [string]$ReleasePassword = $env:LIP_READER_RELEASE_PASSWORD
 )
@@ -24,15 +24,15 @@ $gradleCache = [Environment]::GetEnvironmentVariable(
     "User"
 )
 $pubCache = [Environment]::GetEnvironmentVariable("PUB_CACHE", "User")
-$env:GRADLE_USER_HOME = if ($gradleCache) {
+$env:GRADLE_USER_HOME = if ($gradleCache -and (Test-Path -LiteralPath (Split-Path -Qualifier $gradleCache))) {
     $gradleCache
 } else {
-    "D:\AI_CACHE\gradle"
+    Join-Path $env:USERPROFILE '.gradle'
 }
-$env:PUB_CACHE = if ($pubCache) {
+$env:PUB_CACHE = if ($pubCache -and (Test-Path -LiteralPath (Split-Path -Qualifier $pubCache))) {
     $pubCache
 } else {
-    "D:\AI_CACHE\pub"
+    Join-Path $env:LOCALAPPDATA 'Pub\Cache'
 }
 
 Set-Location -LiteralPath $projectRoot
@@ -101,7 +101,11 @@ if (-not (Test-Path -LiteralPath $sourceApk)) {
 if ($OutputDir) {
     $resolvedOutputDir = [IO.Path]::GetFullPath($OutputDir)
     New-Item -ItemType Directory -Path $resolvedOutputDir -Force | Out-Null
-    $targetApk = Join-Path $resolvedOutputDir "LipReader-App-Android-v1.1.0.apk"
+    $versionLine = Get-Content -LiteralPath (Join-Path $projectRoot 'pubspec.yaml') |
+        Where-Object { $_ -match '^version:\s*([0-9.]+)' } | Select-Object -First 1
+    if ($versionLine -notmatch '^version:\s*([0-9.]+)') { throw 'App version not found.' }
+    $appVersion = $Matches[1]
+    $targetApk = Join-Path $resolvedOutputDir "LipReader-App-Android-v$appVersion-$Mode.apk"
     Copy-Item -LiteralPath $sourceApk -Destination $targetApk -Force
     Write-Output "APK packaged: $targetApk"
 } else {

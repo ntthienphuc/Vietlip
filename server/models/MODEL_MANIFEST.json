@@ -1,0 +1,60 @@
+{
+  "selected": "SO_seed17.pt",
+  "selection_scope": "Six checkpoint application comparison; SO17 retained after WW29 failed to improve reserved half and phone samples.",
+  "precision": "float32",
+  "model_state_entries": 767,
+  "files": [
+    {
+      "file": "SO_seed17.pt",
+      "sha256": "cddfb8c79f1db9d66695c0b1b7e2d98837187c600668a8aee3ccdd5b58981ecc",
+      "source": "E:/Project/Lip/Unified_PR_2026-11-02/Public_Release_Preparation_20261103/Paired_Neural_Kit_v1/package/Neural_Inputs_v1/models/SO_seed17/model.pt",
+      "storage": "NTFS hardlink; do not modify checkpoint bytes in place"
+    },
+    {
+      "file": "WW_seed17.pt",
+      "sha256": "cbe70bb2e6d21d239ab12c2d7c325900603776bb81113446b618d400e5ac46ec",
+      "source": "E:/Project/Lip/Unified_PR_2026-11-02/Public_Release_Preparation_20261103/Paired_Neural_Kit_v1/package/Neural_Inputs_v1/models/WW_seed17/model.pt",
+      "storage": "NTFS hardlink; do not modify checkpoint bytes in place"
+    },
+    {
+      "file": "VLR_pretrained.pt",
+      "sha256": "b38177ae98f1f3cbea1a4c183c2bca804cf0a576e99abd23aab85ae56f413280",
+      "source": "Lip archived pretrained checkpoint, Drive item 1_eUxCCsaN1dYmFGoZcIkgpbOpFy7og5t",
+      "storage": "Restored standalone copy"
+    },
+    {
+      "file": "SO_seed29.pt",
+      "sha256": "e01b81adfdcc0fee6c684d3f79313c8ba360fc762e31425deadce8958194a0af",
+      "source": "E:\\Project\\Lip\\Unified_PR_2026-11-02\\Public_Release_Preparation_20261103\\Paired_Neural_Kit_v1\\package\\Neural_Inputs_v1\\models\\SO_seed29\\model.pt",
+      "storage": "NTFS hardlink; do not modify checkpoint bytes in place"
+    },
+    {
+      "file": "SO_seed43.pt",
+      "sha256": "6c188cde3677e759c29a564bd65e82951cf85dc7d3724f7a0a4154e8f0609c79",
+      "source": "E:\\Project\\Lip\\Unified_PR_2026-11-02\\Public_Release_Preparation_20261103\\Paired_Neural_Kit_v1\\package\\Neural_Inputs_v1\\models\\SO_seed43\\model.pt",
+      "storage": "NTFS hardlink; do not modify checkpoint bytes in place"
+    },
+    {
+      "file": "WW_seed29.pt",
+      "sha256": "7217ab64862a2c53513008702f9b565458dffb429b1ca355c720ba471bffed3d",
+      "source": "E:\\Project\\Lip\\Unified_PR_2026-11-02\\Public_Release_Preparation_20261103\\Paired_Neural_Kit_v1\\package\\Neural_Inputs_v1\\models\\WW_seed29\\model.pt",
+      "storage": "NTFS hardlink; do not modify checkpoint bytes in place"
+    },
+    {
+      "file": "WW_seed43.pt",
+      "sha256": "589059766063100f102e164c866ea473d5e8354957ef721c47f90342548a7be2",
+      "source": "E:\\Project\\Lip\\Unified_PR_2026-11-02\\Public_Release_Preparation_20261103\\Paired_Neural_Kit_v1\\package\\Neural_Inputs_v1\\models\\WW_seed43\\model.pt",
+      "storage": "NTFS hardlink; do not modify checkpoint bytes in place"
+    }
+  ],
+  "assets": [
+    {
+      "file": "../assets/tokenizers/vi.model",
+      "sha256": "6b8c7e138d86282217fad89d7e2be9452a90d398a4e034d9d390586c145e499b"
+    },
+    {
+      "file": "../assets/tokenizers/vi_units.txt",
+      "sha256": "90b0875aa114daad969c70d48589db7bfb49da548ea4d0f86bd07dab0514dfda"
+    }
+  ]
+}

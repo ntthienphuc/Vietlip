@@ -1,18 +1,26 @@
 import 'dart:async';
 
 import 'package:camera/camera.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../data/camera_frame_encoder.dart';
+import '../../data/frame_encoder_service.dart';
+import '../../data/capture_cadence.dart';
+import '../../data/capture_storage.dart';
+import '../../models/transcription_result.dart';
 import '../../data/history_repository.dart';
 import '../../data/live_lip_session.dart';
 import '../../data/lip_reader_api.dart';
 import '../../data/settings_controller.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/app_shell.dart';
+import 'live_caption_panel.dart';
+import 'camera_viewport.dart';
+import 'capture_camera_panel.dart';
+import 'live_capture_layout.dart';
 
 class CaptureScreen extends StatefulWidget {
   const CaptureScreen({
@@ -40,9 +48,14 @@ class _CaptureScreenState extends State<CaptureScreen>
   List<CameraDescription> _cameras = const [];
   XFile? _video;
   Timer? _timer;
+  final _captureClock = Stopwatch();
+  final _captureCadence = CaptureCadence();
   Duration _recordedFor = Duration.zero;
   bool _initializing = true;
+  bool _initializationInFlight = false;
+  bool _suspendingCamera = false;
   bool _submitting = false;
+  bool _changingRecording = false;
   double _uploadProgress = 0;
   String _processingStatus = 'Đang chuẩn bị video…';
   String? _error;
@@ -51,12 +64,25 @@ class _CaptureScreenState extends State<CaptureScreen>
   bool _livePreviewEnabled = true;
   bool _liveWasActive = false;
   bool _encodingLiveFrame = false;
-  DateTime? _lastLiveFrameAt;
+  int _cameraFrames = 0;
+  int _encodedFrames = 0;
+  int _encodeMicros = 0;
   LiveLipSession? _liveSession;
   StreamSubscription<LiveLipUpdate>? _liveSubscription;
+  StreamSubscription<NativeCameraFrame>? _nativeFrames;
   String _liveTranscript = '';
   String _liveStableTranscript = '';
   String _liveStatus = 'Sẵn sàng tạo phụ đề trực tiếp';
+  String _liveModelId = 'unknown';
+  int _liveReceivedFrames = 0;
+  bool _liveIncomplete = false;
+  bool _foreground = false;
+  String _liveProvisional = '';
+  String _liveState = 'waiting_for_face';
+  String? _liveWarning;
+  double? _liveFps;
+  int? _liveElapsedMs;
+  Map<String, dynamic> _liveEvidence = const {};
 
   bool get _isRecording => _camera?.value.isRecordingVideo == true;
   Duration get _activeMaxDuration =>
@@ -64,20 +90,26 @@ class _CaptureScreenState extends State<CaptureScreen>
   bool get _canRunFullClip =>
       _recordedFor == Duration.zero || _recordedFor <= _maxFullClipDuration;
 
-  String get _liveOverlayText {
-    final words = _liveTranscript.trim().split(RegExp(r'\s+'));
-    if (_liveTranscript.trim().isEmpty) return _liveStatus;
-    const visibleWords = 18;
-    return words.length <= visibleWords
-        ? words.join(' ')
-        : '…${words.sublist(words.length - visibleWords).join(' ')}';
-  }
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    unawaited(_initializeCamera());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final active = CaptureVisibility.of(context);
+    if (active == _foreground) return;
+    _foreground = active;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_foreground && _camera == null && !_suspendingCamera) {
+        unawaited(_initializeCamera());
+      } else if (!_foreground) {
+        unawaited(_suspendCamera());
+      }
+    });
   }
 
   @override
@@ -93,7 +125,7 @@ class _CaptureScreenState extends State<CaptureScreen>
 
   void _revealSelectedVideo() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scrollController.hasClients) return;
+      if (!mounted || !_foreground || !_scrollController.hasClients) return;
       final target = (_scrollController.position.maxScrollExtent * 0.72).clamp(
         0.0,
         _scrollController.position.maxScrollExtent,
@@ -112,16 +144,42 @@ class _CaptureScreenState extends State<CaptureScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused) {
-      _timer?.cancel();
-      unawaited(_closeLiveSession());
-      unawaited(_camera?.dispose());
-      _camera = null;
-    } else if (state == AppLifecycleState.resumed && _camera == null) {
+      // Android's first permission dialog briefly deactivates the app. Let the
+      // pending initialization finish instead of opening a second CameraX use case.
+      if (_initializationInFlight && _camera == null) return;
+      unawaited(_suspendCamera());
+    } else if (state == AppLifecycleState.resumed &&
+        _foreground &&
+        _camera == null &&
+        !_initializationInFlight &&
+        !_suspendingCamera) {
       unawaited(_initializeCamera());
     }
   }
 
+  Future<void> _suspendCamera() async {
+    if (_suspendingCamera) return;
+    _suspendingCamera = true;
+    try {
+      if (_isRecording) await _stopRecording();
+      _timer?.cancel();
+      await _closeLiveSession();
+      final controller = _camera;
+      _camera = null;
+      await controller?.dispose();
+    } finally {
+      _suspendingCamera = false;
+      if (mounted &&
+          _foreground &&
+          WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
+        unawaited(_initializeCamera());
+      }
+    }
+  }
+
   Future<void> _initializeCamera([CameraDescription? requested]) async {
+    if (_initializationInFlight || !_foreground) return;
+    _initializationInFlight = true;
     if (mounted) {
       setState(() {
         _initializing = true;
@@ -139,21 +197,41 @@ class _CaptureScreenState extends State<CaptureScreen>
           );
       final controller = CameraController(
         selected,
-        ResolutionPreset.high,
-        enableAudio: false,
+        ResolutionPreset.medium,
+        // Audio is saved in the local MP4 for reference transcription only.
+        // LiveLipSession sends JPEG frames; microphone samples never enter VSR.
+        enableAudio: true,
         imageFormatGroup: ImageFormatGroup.yuv420,
       );
-      await controller.initialize();
-      await controller.prepareForVideoRecording();
+      debugPrint('Lip camera: initializing ${selected.name}');
+      await controller.initialize().timeout(const Duration(seconds: 20));
+      debugPrint('Lip camera: initialized');
+      await controller
+          .lockCaptureOrientation(DeviceOrientation.portraitUp)
+          .timeout(const Duration(seconds: 3));
+      debugPrint(
+        'Lip camera: locked=${controller.value.lockedCaptureOrientation} '
+        'device=${controller.value.deviceOrientation} '
+        'sensor=${selected.sensorOrientation}',
+      );
+      if (!mounted || !_foreground) {
+        await controller.dispose();
+        return;
+      }
       await _camera?.dispose();
       _camera = controller;
     } on CameraException catch (error) {
-      _error = error.code == 'CameraAccessDenied'
-          ? 'Bạn cần cấp quyền camera để quay khuôn mặt.'
-          : 'Không mở được camera: ${error.description ?? error.code}';
+      _error = switch (error.code) {
+        'CameraAccessDenied' || 'CameraAccessDeniedWithoutPrompt' =>
+          'Bạn cần cấp quyền camera để quay khuôn mặt.',
+        'AudioAccessDenied' || 'AudioAccessDeniedWithoutPrompt' =>
+          'Cần quyền microphone để lưu video có tiếng. Bật quyền Microphone trong Cài đặt của điện thoại rồi mở lại màn hình quay.',
+        _ => 'Không mở được camera: ${error.description ?? error.code}',
+      };
     } catch (error) {
       _error = error.toString();
     } finally {
+      _initializationInFlight = false;
       if (mounted) setState(() => _initializing = false);
     }
   }
@@ -170,17 +248,55 @@ class _CaptureScreenState extends State<CaptureScreen>
 
   Future<void> _toggleRecording() async {
     final controller = _camera;
-    if (controller == null || !controller.value.isInitialized || _submitting) {
+    if (controller == null ||
+        !controller.value.isInitialized ||
+        _submitting ||
+        _changingRecording) {
       return;
     }
     if (_isRecording) {
       await _stopRecording();
       return;
     }
+    setState(() {
+      _changingRecording = true;
+      _error = null;
+      _liveStatus = _livePreviewEnabled
+          ? 'Đang kết nối máy chủ…'
+          : 'Đang mở camera…';
+    });
     try {
       final liveSession = await _openLiveSession(controller);
+      if (!mounted || !_foreground) {
+        await _closeLiveSession();
+        return;
+      }
+      _cameraFrames = _encodedFrames = _encodeMicros = 0;
+      _captureClock
+        ..reset()
+        ..start();
+      if (mounted) setState(() => _liveStatus = 'Đang mở luồng camera…');
       await controller.startVideoRecording(
         onAvailable: liveSession == null ? null : _handleLiveFrame,
+      );
+      // Subscribe after CameraX has rebound recording use cases. Preview-only
+      // frames before that transition would create a false capture gap.
+      if (liveSession != null && usesNativeFrameEncoder) {
+        _nativeFrames = nativeCameraFrames(liveSession.sampleFps).listen(
+          _handleNativeFrame,
+          onError: (Object error) {
+            debugPrint('Lip native frame error: $error');
+            if (mounted) {
+              setState(() => _liveStatus = 'Bỏ qua một khung hình bị lỗi…');
+            }
+          },
+        );
+      }
+      debugPrint(
+        'Lip camera: recording=${controller.value.recordingOrientation} '
+        'locked=${controller.value.lockedCaptureOrientation} '
+        'device=${controller.value.deviceOrientation} '
+        'preview=${controller.value.previewSize}',
       );
       _timer?.cancel();
       setState(() {
@@ -190,7 +306,22 @@ class _CaptureScreenState extends State<CaptureScreen>
         _liveWasActive = _livePreviewEnabled;
         _liveTranscript = '';
         _liveStableTranscript = '';
+        _liveModelId = 'unknown';
+        _liveReceivedFrames = 0;
+        _liveIncomplete = false;
+        _liveProvisional = '';
+        _liveWarning = null;
+        _liveEvidence = const {};
+        _liveFps = null;
+        _liveElapsedMs = null;
+        _liveState = 'waiting_for_face';
+        _liveStatus = _cameraFrames == 0
+            ? 'Đang mở luồng camera…'
+            : 'Bắt đầu nói · nhìn thẳng vào camera';
       });
+      if (mounted) {
+        CaptureSessionNotification(_livePreviewEnabled).dispatch(context);
+      }
       _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
         if (!mounted) return;
         final next = Duration(seconds: timer.tick);
@@ -199,82 +330,156 @@ class _CaptureScreenState extends State<CaptureScreen>
       });
     } catch (error) {
       await _closeLiveSession();
-      if (mounted) setState(() => _error = 'Không thể bắt đầu quay: $error');
+      if (mounted) {
+        final message = error is StateError
+            ? error.message.toString()
+            : 'Không thể bắt đầu quay. Hãy thử mở lại camera.';
+        setState(() {
+          _error = message;
+          _liveWarning = message;
+          _liveStatus = message;
+          _liveState = 'disconnected';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            duration: const Duration(seconds: 7),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _changingRecording = false);
     }
   }
 
   Future<LiveLipSession?> _openLiveSession(CameraController controller) async {
     if (!_livePreviewEnabled) return null;
     if (!controller.supportsImageStreaming()) {
-      if (mounted) {
-        setState(
-          () => _liveStatus =
-              'Camera này không hỗ trợ phụ đề trực tiếp; video vẫn được lưu.',
-        );
-      }
-      return null;
+      throw StateError(
+        'Camera này không hỗ trợ live. Bạn có thể tắt phụ đề trực tiếp để quay video.',
+      );
     }
     await _closeLiveSession();
     if (mounted) setState(() => _liveStatus = 'Đang kết nối phụ đề…');
+    final connectClock = Stopwatch()..start();
     try {
-      final session = LiveLipSession(widget.settings.apiUrl);
+      final session = LiveLipSession(
+        widget.settings.apiUrl,
+        onConnectionStage: (message) {
+          if (mounted) setState(() => _liveStatus = message);
+        },
+        rotationDegrees: usesNativeFrameEncoder
+            ? controller.description.sensorOrientation
+            : 0,
+      );
       await session.connect();
+      debugPrint(
+        'Lip connection: ready_ms=${connectClock.elapsedMilliseconds}',
+      );
+      if (!session.autoEndpoint) {
+        await session.dispose();
+        throw StateError(
+          'Cần cập nhật server để dùng tự động nhận biết đang nói.',
+        );
+      }
       _liveSession = session;
       _liveSubscription = session.updates.listen(_handleLiveUpdate);
       if (mounted) {
         setState(() => _liveStatus = 'Đang thu nhận chuyển động môi…');
       }
       return session;
-    } catch (_) {
-      if (mounted) {
-        setState(
-          () => _liveStatus =
-              'Chưa kết nối được phụ đề; video vẫn được lưu bình thường.',
-        );
-      }
-      return null;
+    } catch (error) {
+      debugPrint('Live connection failed: $error');
+      if (error is StateError) rethrow;
+      throw StateError(
+        error is TimeoutException
+            ? 'Máy chủ chưa phản hồi sau 6 giây. Kiểm tra Wi-Fi và máy chủ rồi bấm thử lại.'
+            : 'Chưa kết nối được máy chủ. Kiểm tra Wi-Fi và địa chỉ trong Cài đặt rồi thử lại.',
+      );
     }
   }
 
   void _handleLiveUpdate(LiveLipUpdate update) {
     if (!mounted) return;
     setState(() {
+      _liveFps = update.captureFps ?? _liveFps;
+      _liveElapsedMs = update.elapsedMs ?? _liveElapsedMs;
+      _liveState = update.recognitionState ?? _liveState;
+      _liveReceivedFrames = update.receivedFrames ?? _liveReceivedFrames;
+      _liveIncomplete = _liveIncomplete || update.incomplete;
+      if (update.evidence.isNotEmpty) _liveEvidence = update.evidence;
+      if (update.type == 'activity' && _liveState == 'speaking') {
+        _liveWarning = null;
+      }
       if (update.type == 'partial' ||
           update.type == 'segment_final' ||
           update.type == 'session_final') {
         _liveTranscript = update.transcript;
         _liveStableTranscript = update.stableTranscript;
-        _liveStatus = update.type == 'session_final'
-            ? 'Đã hoàn tất phụ đề của phiên'
-            : update.device?.startsWith('cpu') == true
-            ? 'Phụ đề từ CPU · đang tiếp tục cập nhật'
-            : 'Phụ đề đang được cập nhật';
-      } else if (update.type == 'ready') {
-        _liveStatus = 'Đang thu nhận chuyển động môi…';
-      } else if (update.message?.isNotEmpty == true) {
-        _liveStatus = update.message!;
+        _liveProvisional = update.provisionalTranscript;
+        _liveWarning = null;
+        _liveModelId = update.modelId ?? _liveModelId;
+      } else if (update.type == 'notice' ||
+          update.type == 'disconnected' ||
+          update.type == 'error') {
+        _liveWarning = update.message;
+        _liveProvisional = '';
+        _liveTranscript = _liveStableTranscript;
       }
+      _liveStatus = update.type == 'session_final'
+          ? 'Đã hoàn tất phiên'
+          : _liveWarning ?? liveStatusLabel(_liveState, update.decoderState);
     });
+    if (update.captionEventId != null) {
+      final session = _liveSession;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // A later update may replace this one before Flutter draws a frame.
+        // Acknowledge only captions present in this session's rendered state.
+        if (mounted &&
+            _foreground &&
+            _isRecording &&
+            WidgetsBinding.instance.lifecycleState ==
+                AppLifecycleState.resumed &&
+            ModalRoute.of(context)?.isCurrent != false &&
+            identical(session, _liveSession) &&
+            _liveTranscript == update.transcript) {
+          session?.acknowledgeCaptionFrame(update);
+        }
+      });
+    }
   }
 
   void _handleLiveFrame(CameraImage image) {
-    final session = _liveSession;
-    if (session == null || !session.isConnected || _encodingLiveFrame) return;
-    final now = DateTime.now();
-    if (_lastLiveFrameAt != null &&
-        now.difference(_lastLiveFrameAt!) < const Duration(milliseconds: 125)) {
+    // The callback enables CameraX ImageAnalysis. On Android its queued Pigeon
+    // events can still arrive across stop/start, but only native JPEG events
+    // own the capture clock. Mixing these two paths sends time backwards.
+    if (usesNativeFrameEncoder) {
+      if (_cameraFrames < 3) {
+        debugPrint(
+          'Lip transport: skipped Dart camera callback; native stream owns timestamps',
+        );
+      }
       return;
     }
-    _lastLiveFrameAt = now;
+    _showCameraReady();
+    _cameraFrames++;
+    final session = _liveSession;
+    if (session == null || !session.canSendFrame || _encodingLiveFrame) return;
+    final captureUs = _captureClock.elapsedMicroseconds;
+    if (!_captureCadence.accept(captureUs, session.sampleFps)) return;
+    final capturedAtMs = captureUs / 1000.0;
     _encodingLiveFrame = true;
+    final encodeClock = Stopwatch()..start();
     final payload = copyCameraFrame(
       image,
       rotationDegrees: _camera?.description.sensorOrientation ?? 0,
     );
     unawaited(
-      compute(encodeCameraFrame, payload)
+      encodeLiveFrame(payload)
           .then((jpeg) {
-            if (jpeg != null) session.sendFrame(jpeg);
+            if (jpeg != null) {
+              session.sendFrame(jpeg, capturedAtMs: capturedAtMs);
+            }
           })
           .catchError((Object _) {
             if (mounted) {
@@ -284,11 +489,44 @@ class _CaptureScreenState extends State<CaptureScreen>
               );
             }
           })
-          .whenComplete(() => _encodingLiveFrame = false),
+          .whenComplete(() {
+            _encodedFrames++;
+            _encodeMicros += encodeClock.elapsedMicroseconds;
+            _encodingLiveFrame = false;
+          }),
     );
   }
 
+  void _handleNativeFrame(NativeCameraFrame frame) {
+    try {
+      _showCameraReady();
+      _cameraFrames++;
+      final session = _liveSession;
+      if (session == null || !session.canSendFrame) return;
+      if (!session.sendFrame(frame.jpeg, capturedAtMs: frame.capturedAtMs)) {
+        return;
+      }
+      if (_encodedFrames < 3) {
+        debugPrint(
+          'Lip transport: native frame=$_encodedFrames timestamp_ms=${frame.capturedAtMs}',
+        );
+      }
+      _encodedFrames++;
+      _encodeMicros += frame.encodeMicros;
+    } finally {
+      unawaited(frame.acknowledge());
+    }
+  }
+
+  void _showCameraReady() {
+    if (_cameraFrames == 0 && mounted && _liveSession != null) {
+      setState(() => _liveStatus = 'Bắt đầu nói · nhìn thẳng vào camera');
+    }
+  }
+
   Future<String?> _closeLiveSession() async {
+    await _nativeFrames?.cancel();
+    _nativeFrames = null;
     final session = _liveSession;
     _liveSession = null;
     if (session != null) {
@@ -297,23 +535,80 @@ class _CaptureScreenState extends State<CaptureScreen>
       }
     }
     final finalTranscript = session == null ? null : await session.stop();
+    if (session != null) {
+      debugPrint(
+        'Lip transport: rejected_stale_timestamps=${session.rejectedTimestampFrames}',
+      );
+    }
     await _liveSubscription?.cancel();
     _liveSubscription = null;
     _encodingLiveFrame = false;
-    _lastLiveFrameAt = null;
+    _captureCadence.reset();
     return finalTranscript;
   }
 
   Future<void> _stopRecording() async {
     final controller = _camera;
-    if (controller == null || !controller.value.isRecordingVideo) return;
+    if (controller == null ||
+        !controller.value.isRecordingVideo ||
+        _changingRecording) {
+      return;
+    }
+    _changingRecording = true;
     _timer?.cancel();
     try {
-      final video = await controller.stopVideoRecording();
+      final temporaryVideo = await controller.stopVideoRecording();
+      _captureClock.stop();
+      debugPrint(
+        'Lip transport: camera=$_cameraFrames encoded=$_encodedFrames '
+        'seconds=${_captureClock.elapsedMilliseconds / 1000} '
+        'encode_ms=${_encodeMicros / (_encodedFrames == 0 ? 1 : _encodedFrames) / 1000}',
+      );
+      // Expose the cache immediately, even if durable storage is unavailable.
+      if (mounted) setState(() => _video = temporaryVideo);
+      XFile video = temporaryVideo;
+      try {
+        video = XFile(await preserveRecording(temporaryVideo.path));
+      } catch (_) {
+        if (mounted) {
+          setState(
+            () => _error =
+                'Chưa lưu được bản bền vững; hãy xử lý video trước khi đóng app.',
+          );
+        }
+      }
       if (mounted && _livePreviewEnabled) {
         setState(() => _liveStatus = 'Đang hoàn tất phần phụ đề cuối…');
       }
       final finalTranscript = await _closeLiveSession();
+      if (finalTranscript == null) _liveIncomplete = true;
+      final savedTranscript = finalTranscript?.trim().isNotEmpty == true
+          ? finalTranscript!.trim()
+          : _liveTranscript.trim();
+      if (savedTranscript.isNotEmpty) {
+        await widget.history.add(
+          TranscriptionResult(
+            requestId: 'live-${DateTime.now().microsecondsSinceEpoch}',
+            transcript: savedTranscript,
+            status: 'review_required',
+            modelId: _liveModelId,
+            elapsedMs: _captureClock.elapsedMilliseconds,
+            numFrames: _liveReceivedFrames,
+            createdAt: DateTime.now(),
+            alternatives: const [],
+            processingMode: 'visual_only',
+            riskNotice: _liveIncomplete
+                ? 'Phiên bị gián đoạn; bản ghi có thể thiếu nội dung.'
+                : 'Phụ đề trực tiếp cần được rà soát.',
+            diagnostics: {
+              'source': 'realtime',
+              'incomplete': _liveIncomplete,
+              'evidence': _liveEvidence,
+              'video_path': video.path,
+            },
+          ),
+        );
+      }
       if (mounted) {
         setState(() {
           _video = video;
@@ -335,6 +630,13 @@ class _CaptureScreenState extends State<CaptureScreen>
     } catch (error) {
       await _closeLiveSession();
       if (mounted) setState(() => _error = 'Không thể lưu video: $error');
+    } finally {
+      if (mounted) {
+        setState(() => _changingRecording = false);
+        CaptureSessionNotification(
+          _isRecording && _livePreviewEnabled,
+        ).dispatch(context);
+      }
     }
   }
 
@@ -421,6 +723,31 @@ class _CaptureScreenState extends State<CaptureScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (_isRecording && _livePreviewEnabled) {
+      return LiveCaptureLayout(
+        header: const Wrap(
+          spacing: 10,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          alignment: WrapAlignment.spaceBetween,
+          children: [
+            Icon(Icons.graphic_eq_rounded, color: AppColors.primary, size: 22),
+            SizedBox(width: 10),
+            Text(
+              'Đang live',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+            Text(
+              'Chỉ dùng hình ảnh',
+              style: TextStyle(fontSize: 12, color: AppColors.muted),
+            ),
+          ],
+        ),
+        preview: _buildCameraCard(),
+        captions: _buildLiveDraft(),
+        controls: _buildCaptureControls(),
+      );
+    }
     return SafeArea(
       child: CustomScrollView(
         controller: _scrollController,
@@ -430,12 +757,9 @@ class _CaptureScreenState extends State<CaptureScreen>
             title: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text('LipLens', style: TextStyle(fontWeight: FontWeight.w800)),
                 Text(
-                  'Đọc môi Việt',
-                  style: TextStyle(fontWeight: FontWeight.w800),
-                ),
-                Text(
-                  'Nhận dạng lời nói qua hình ảnh',
+                  'Đọc lời nói qua chuyển động môi',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -446,9 +770,11 @@ class _CaptureScreenState extends State<CaptureScreen>
             ),
             actions: [
               IconButton(
-                tooltip: 'Đổi camera',
-                onPressed: _flipCamera,
-                icon: const Icon(Icons.cameraswitch_outlined),
+                tooltip: 'Tuỳ chọn quay',
+                onPressed: _isRecording || _changingRecording
+                    ? null
+                    : _showCaptureOptions,
+                icon: const Icon(Icons.more_horiz_rounded),
               ),
             ],
           ),
@@ -456,13 +782,47 @@ class _CaptureScreenState extends State<CaptureScreen>
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
             sliver: SliverList.list(
               children: [
-                _buildSafetyNote(),
-                const SizedBox(height: 14),
-                _buildCameraCard(),
+                SizedBox(
+                  height: (MediaQuery.sizeOf(context).height * .55).clamp(
+                    340.0,
+                    540.0,
+                  ),
+                  child: _buildCameraCard(),
+                ),
                 const SizedBox(height: 14),
                 _buildCaptureControls(),
                 const SizedBox(height: 10),
-                _buildLiveOption(),
+                const Row(
+                  children: [
+                    Icon(Icons.mic_none, size: 18),
+                    SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Video lưu có âm thanh để đối chiếu. Phụ đề live chỉ dùng hình ảnh.',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                if (_changingRecording && !_isRecording) ...[
+                  Row(
+                    children: [
+                      const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(child: Text(_liveStatus)),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                if (_error != null) ...[
+                  _ErrorCard(message: _error!),
+                  const SizedBox(height: 10),
+                ],
                 if (_livePreviewEnabled &&
                     (_isRecording || _liveWasActive)) ...[
                   const SizedBox(height: 10),
@@ -477,12 +837,6 @@ class _CaptureScreenState extends State<CaptureScreen>
                   else
                     _buildContinuousOnlyNote(),
                 ],
-                if (_error != null) ...[
-                  const SizedBox(height: 14),
-                  _ErrorCard(message: _error!),
-                ],
-                const SizedBox(height: 18),
-                _buildTips(),
               ],
             ),
           ),
@@ -582,198 +936,156 @@ class _CaptureScreenState extends State<CaptureScreen>
     );
   }
 
-  Widget _buildSafetyNote() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.warningSoft,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: const Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.fact_check_outlined, color: AppColors.warning),
-          SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Hãy kiểm tra kết quả trước khi sử dụng. Nhiều âm tiếng Việt có '
-              'chuyển động môi tương tự nhau.',
-              style: TextStyle(fontWeight: FontWeight.w600),
+  void _showCaptureOptions() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+          child: StatefulBuilder(
+            builder: (context, updateSheet) => Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Tuỳ chọn quay',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 16),
+                _buildLiveOption(onChanged: () => updateSheet(() {})),
+                const SizedBox(height: 16),
+                _buildTips(),
+                const SizedBox(height: 14),
+                const Text(
+                  'Video được lưu có âm thanh để bạn đối chiếu. Phụ đề trực tiếp chỉ dùng hình ảnh.',
+                  style: TextStyle(color: AppColors.muted),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildCameraCard() {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: AspectRatio(
-        aspectRatio: 3 / 4,
-        child: ColoredBox(
-          color: AppColors.ink,
-          child: Stack(
-            fit: StackFit.expand,
+    final controller = _camera;
+    final Widget preview;
+    if (_initializing) {
+      preview = const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      );
+    } else if (controller?.value.isInitialized == true) {
+      const guide = CustomPaint(painter: FaceGuidePainter());
+      preview = usesNativeFrameEncoder
+          ? NativeCameraPreview(textureId: controller!.cameraId, overlay: guide)
+          : CameraViewport(
+              sourceSize: Size(
+                controller!.value.previewSize!.height,
+                controller.value.previewSize!.width,
+              ),
+              overlay: guide,
+              child: CameraPreview(controller),
+            );
+    } else {
+      preview = Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              if (_initializing)
-                const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
-                )
-              else if (_camera?.value.isInitialized == true)
-                CameraPreview(_camera!)
-              else
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(28),
-                    child: Text(
-                      'Camera chưa sẵn sàng.\nBạn vẫn có thể chọn video có sẵn.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ),
-              const IgnorePointer(
-                child: CustomPaint(painter: _FaceGuidePainter()),
+              const Icon(
+                Icons.videocam_off_outlined,
+                color: Colors.white70,
+                size: 34,
               ),
-              Positioned(
-                top: 14,
-                left: 14,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.55),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: _isRecording
-                              ? Colors.redAccent
-                              : AppColors.primarySoft,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 7),
-                      Text(
-                        _isRecording ? _timerLabel : 'Giữ mặt trong khung',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              const SizedBox(height: 12),
+              const Text(
+                'Camera chưa sẵn sàng',
+                style: TextStyle(color: Colors.white),
               ),
-              Positioned(
-                bottom: 18,
-                left: 18,
-                right: 18,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  child: _isRecording && _livePreviewEnabled
-                      ? Semantics(
-                          liveRegion: true,
-                          label: 'Phụ đề trực tiếp: $_liveOverlayText',
-                          child: Container(
-                            key: ValueKey(_liveOverlayText),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.72),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Text(
-                              _liveOverlayText,
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                height: 1.25,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        )
-                      : Text(
-                          _livePreviewEnabled
-                              ? 'Nhìn thẳng · đủ sáng · phụ đề liên tục đến 5 phút'
-                              : 'Nhìn thẳng · đủ sáng · nói tự nhiên 2–45 giây',
-                          key: const ValueKey('camera-guidance'),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            shadows: [
-                              Shadow(blurRadius: 8, color: Colors.black),
-                            ],
-                          ),
-                        ),
-                ),
+              TextButton(
+                onPressed: _initializeCamera,
+                child: const Text('Mở lại camera'),
               ),
             ],
           ),
         ),
-      ),
+      );
+    }
+    return CaptureCameraPanel(
+      preview: preview,
+      recording: _isRecording,
+      timerLabel: _timerLabel,
+      onFlip: _changingRecording || _submitting ? null : _flipCamera,
     );
   }
 
   Widget _buildCaptureControls() {
     return Row(
       children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: _isRecording || _submitting ? null : _pickVideo,
-            icon: const Icon(Icons.video_library_outlined),
-            label: const Text('Chọn video'),
+        if (!_isRecording)
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: _isRecording || _submitting || _changingRecording
+                  ? null
+                  : _pickVideo,
+              icon: const Icon(Icons.video_library_outlined),
+              label: const Text('Chọn video'),
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
+        if (!_isRecording) const SizedBox(width: 12),
         Expanded(
           child: FilledButton.icon(
             style: _isRecording
                 ? FilledButton.styleFrom(backgroundColor: AppColors.error)
                 : null,
-            onPressed: _camera?.value.isInitialized == true && !_submitting
+            onPressed:
+                _camera?.value.isInitialized == true &&
+                    !_submitting &&
+                    !_changingRecording
                 ? _toggleRecording
                 : null,
             icon: Icon(
               _isRecording ? Icons.stop_rounded : Icons.fiber_manual_record,
             ),
-            label: Text(_isRecording ? 'Dừng quay' : 'Bắt đầu quay'),
+            label: Text(
+              _changingRecording
+                  ? _isRecording
+                        ? 'Đang kết thúc…'
+                        : 'Đang chuẩn bị…'
+                  : _isRecording
+                  ? 'Kết thúc phiên'
+                  : _livePreviewEnabled
+                  ? 'Bắt đầu live'
+                  : 'Bắt đầu quay',
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildLiveOption() {
+  Widget _buildLiveOption({VoidCallback? onChanged}) {
     return Card(
       child: SwitchListTile(
         value: _livePreviewEnabled,
-        onChanged: _isRecording || _submitting
+        onChanged: _isRecording || _submitting || _changingRecording
             ? null
-            : (value) => setState(() {
-                _livePreviewEnabled = value;
-                if (!value) {
-                  _liveWasActive = false;
-                  _liveTranscript = '';
-                  _liveStableTranscript = '';
-                  _liveStatus = 'Sẵn sàng tạo phụ đề trực tiếp';
-                }
-              }),
+            : (value) {
+                setState(() {
+                  _livePreviewEnabled = value;
+                  if (!value) {
+                    _liveWasActive = false;
+                    _liveTranscript = '';
+                    _liveStableTranscript = '';
+                    _liveStatus = 'Sẵn sàng tạo phụ đề trực tiếp';
+                  }
+                });
+                onChanged?.call();
+              },
         secondary: const Icon(
           Icons.subtitles_outlined,
           color: AppColors.primary,
@@ -783,80 +1095,40 @@ class _CaptureScreenState extends State<CaptureScreen>
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
         subtitle: const Text(
-          'Nói liên tục tối đa 5 phút; nội dung được cập nhật và nối thành một bản ghi.',
+          'Tự chốt câu khi bạn ngừng nói. Mỗi phiên tối đa 5 phút.',
         ),
       ),
     );
   }
 
-  Widget _buildLiveDraft() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.primarySoft,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              if (_isRecording)
-                const SizedBox.square(
-                  dimension: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              else
-                const Icon(
-                  Icons.fact_check_outlined,
-                  size: 19,
-                  color: AppColors.primary,
-                ),
-              const SizedBox(width: 9),
-              Expanded(
-                child: const Text(
-                  'Nội dung đang nhận dạng',
-                  style: TextStyle(fontWeight: FontWeight.w800),
-                ),
-              ),
-              if (_liveTranscript.isNotEmpty)
-                IconButton(
-                  tooltip: 'Sao chép phụ đề',
-                  onPressed: () async {
-                    await Clipboard.setData(
-                      ClipboardData(text: _liveTranscript),
-                    );
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Đã sao chép phụ đề')),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.copy_rounded),
-                ),
-            ],
-          ),
-          const SizedBox(height: 9),
-          SelectableText(
-            _liveTranscript.isEmpty ? '…' : _liveTranscript,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-          ),
-          if (_liveStableTranscript.isNotEmpty) ...[
-            const SizedBox(height: 5),
-            Text(
-              'Đã ổn định: $_liveStableTranscript',
-              style: const TextStyle(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-          const SizedBox(height: 7),
-          Text(_liveStatus, style: const TextStyle(color: AppColors.muted)),
-        ],
-      ),
-    );
-  }
+  Widget _buildLiveDraft() => SizedBox(
+    height: 270,
+    child: LiveCaptionPanel(
+      transcript: _liveTranscript,
+      committed: _liveStableTranscript,
+      provisional: _liveProvisional,
+      status: _liveStatus,
+      unavailable:
+          _liveWarning != null ||
+          const {
+            'waiting_for_face',
+            'multiple_faces',
+            'face_too_small',
+            'poor_light',
+            'look_straight',
+            'head_motion',
+            'camera_stalled',
+            'activity_unavailable',
+            'disconnected',
+            'network_stalled',
+          }.contains(_liveState),
+      captureFps: _liveFps,
+      elapsedMs: _liveElapsedMs,
+      waitingForCaption: {'speaking', 'pausing'}.contains(_liveState),
+      unavailableWindows:
+          (_liveEvidence['unavailable_windows'] as num?)?.toInt() ?? 0,
+    ),
+  );
 
   Widget _buildSelectedVideo() {
     final video = _video!;
@@ -887,6 +1159,8 @@ class _CaptureScreenState extends State<CaptureScreen>
                   Text(
                     _canRunFullClip
                         ? 'Video sẵn sàng'
+                        : _liveTranscript.isEmpty
+                        ? 'Video của phiên đã lưu'
                         : 'Phiên phụ đề đã sẵn sàng',
                     style: TextStyle(fontWeight: FontWeight.w800),
                   ),
@@ -1073,51 +1347,4 @@ class _ErrorCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _FaceGuidePainter extends CustomPainter {
-  const _FaceGuidePainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final overlay = Paint()..color = Colors.black.withValues(alpha: 0.22);
-    final guideRect = Rect.fromCenter(
-      center: Offset(size.width / 2, size.height * 0.47),
-      width: size.width * 0.72,
-      height: size.height * 0.62,
-    );
-    final guide = RRect.fromRectAndRadius(
-      guideRect,
-      Radius.circular(size.width * 0.36),
-    );
-    final full = Path()..addRect(Offset.zero & size);
-    final hole = Path()..addRRect(guide);
-    canvas.drawPath(
-      Path.combine(PathOperation.difference, full, hole),
-      overlay,
-    );
-    canvas.drawRRect(
-      guide,
-      Paint()
-        ..color = Colors.white.withValues(alpha: 0.9)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.2,
-    );
-
-    final mouthCenter = Offset(size.width / 2, size.height * 0.60);
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: mouthCenter,
-        width: size.width * 0.32,
-        height: size.height * 0.10,
-      ),
-      Paint()
-        ..color = AppColors.accent.withValues(alpha: 0.95)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.2,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

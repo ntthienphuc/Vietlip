@@ -53,6 +53,20 @@ server/.venv/
 server/.pytest_cache/
 server/.env
 server/.env.local
+server/.ruff_cache/
+.ruff_cache/
+*.clixml
+*.pem
+*.p12
+*.pfx
+*.key
+*.apk
+*.aab
+*.onnx
+*.safetensors
+*.wav
+*.m4a
+*.mov
 **/__pycache__/
 
 # Local captures and model payloads
@@ -60,6 +74,9 @@ server/.env.local
 *.mp4
 *.ckpt
 *.pt
+*.gguf
+/server/tools/
+**/android/.gradle/
 
 # Local release packaging
 /build/windows_server/

@@ -31,7 +31,15 @@ Uint8List? encodeCameraFrame(Map<String, Object> payload) {
   if (width <= 0 || height <= 0 || planes.isEmpty) return null;
 
   if (format == ImageFormatGroup.jpeg.name) {
-    return planes.first['bytes']! as Uint8List;
+    final decoded = img.decodeJpg(planes.first['bytes']! as Uint8List);
+    if (decoded == null) return null;
+    final oriented = rotation == 0
+        ? decoded
+        : img.copyRotate(decoded, angle: rotation);
+    final resized = oriented.width > 360
+        ? img.copyResize(oriented, width: 360)
+        : oriented;
+    return Uint8List.fromList(img.encodeJpg(resized, quality: 80));
   }
 
   final rotatedWidth = rotation == 90 || rotation == 270 ? height : width;
@@ -50,7 +58,7 @@ Uint8List? encodeCameraFrame(Map<String, Object> payload) {
     }
   }
 
-  var oriented = switch (rotation) {
+  final oriented = switch (rotation) {
     90 => img.copyRotate(output, angle: 90),
     180 => img.copyRotate(output, angle: 180),
     270 => img.copyRotate(output, angle: 270),
@@ -58,7 +66,7 @@ Uint8List? encodeCameraFrame(Map<String, Object> payload) {
   };
   // The server's MediaPipe alignment is mirror-invariant. Preserve the camera
   // buffer orientation so live and final video use the same geometry.
-  return Uint8List.fromList(img.encodeJpg(oriented, quality: 72));
+  return Uint8List.fromList(img.encodeJpg(oriented, quality: 80));
 }
 
 (int, int, int)? _readPixel(

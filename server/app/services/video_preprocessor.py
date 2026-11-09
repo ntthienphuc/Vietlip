@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
 from typing import Any
+from .landmark_cache import LandmarkCache
 
 
 class VideoValidationError(ValueError):
@@ -50,13 +51,12 @@ class VideoPreprocessor:
     ):
         self.auto_avsr_root = auto_avsr_root
         self.mean_face_path = (
-            Path(__file__).resolve().parents[2]
-            / "assets"
-            / "20words_mean_face.npy"
+            Path(__file__).resolve().parents[2] / "assets" / "20words_mean_face.npy"
         )
         self.target_fps = target_fps
         self.min_frames = min_frames
         self.max_frames = max_frames
+        self._landmark_cache = LandmarkCache()
 
     def prepare(self, video_path: Path, input_kind: str) -> PreparedVideo:
         frames_rgb, source_fps = self._read_at_target_fps(video_path)
@@ -88,6 +88,7 @@ class VideoPreprocessor:
             frames_at_target,
             source_fps=source_fps,
             input_kind=input_kind,
+            rotation_fallback=False,
         )
 
     def _prepare_frames(
@@ -96,6 +97,7 @@ class VideoPreprocessor:
         *,
         source_fps: float,
         input_kind: str,
+        rotation_fallback: bool = True,
     ) -> PreparedVideo:
         try:
             import cv2
@@ -103,8 +105,7 @@ class VideoPreprocessor:
             import torch
         except ImportError as exc:
             raise RuntimeError(
-                "Video runtime is missing. Install requirements-cpu.txt "
-                "or requirements-gpu.txt."
+                "Video runtime is missing. Install requirements-cpu.txt or requirements-gpu.txt."
             ) from exc
 
         if len(frames_rgb) < self.min_frames:
@@ -137,11 +138,7 @@ class VideoPreprocessor:
                     "Run setup_server.ps1 again."
                 )
             detector_path = (
-                self.auto_avsr_root
-                / "preparation"
-                / "detectors"
-                / "mediapipe"
-                / "detector.py"
+                self.auto_avsr_root / "preparation" / "detectors" / "mediapipe" / "detector.py"
             )
             process_path = detector_path.with_name("video_process.py")
             detector_module = _load_module("_lip_mp_detector", detector_path)
@@ -149,13 +146,13 @@ class VideoPreprocessor:
             tracking = self._track_face(
                 frames_rgb,
                 detector_module=detector_module,
+                rotation_fallback=rotation_fallback,
+                use_cache=not rotation_fallback,
             )
             frames_rgb = tracking.frames
             landmarks = tracking.landmarks
             face_tracking = tracking.diagnostics
-            face_detection_ratio = float(
-                face_tracking["merged_detection_ratio"]
-            )
+            face_detection_ratio = float(face_tracking["merged_detection_ratio"])
             try:
                 mouth_frames = process_module.VideoProcess(
                     mean_face_path=str(self.mean_face_path),
@@ -189,9 +186,7 @@ class VideoPreprocessor:
             mouth_frames = np.stack(
                 [
                     cv2.resize(
-                        cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-                        if frame.ndim == 3
-                        else frame,
+                        cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY) if frame.ndim == 3 else frame,
                         (96, 96),
                         interpolation=cv2.INTER_AREA,
                     )
@@ -222,9 +217,7 @@ class VideoPreprocessor:
                 "source_fps": round(source_fps, 3),
                 "target_fps": self.target_fps,
                 "preprocessing": {
-                    "pipeline": (
-                        "auto_avsr_mediapipe_face_alignment_then_mouth_roi"
-                    ),
+                    "pipeline": ("auto_avsr_mediapipe_face_alignment_then_mouth_roi"),
                     "face_tracking": face_tracking,
                     "mouth_roi": "96x96_gray_center_crop_88x88",
                 },
@@ -264,144 +257,152 @@ class VideoPreprocessor:
         frames_rgb: list[Any],
         *,
         detector_module: ModuleType,
+        rotation_fallback: bool = True,
+        use_cache: bool = False,
     ) -> FaceTrackingResult:
         import cv2
 
         detector = detector_module.LandmarksDetector()
 
-        def detect(
-            candidate_frames: list[Any],
-            rotation_degrees: int,
-        ) -> FaceTrackingResult:
-            full = detector.detect(
-                candidate_frames,
-                detector.full_range_detector,
-            )
-            full_detected = self._count_landmarks(full)
-            full_ratio = full_detected / len(candidate_frames)
+        try:
 
-            short: list[Any] | None = None
-            if full_ratio < 0.98:
-                short = detector.detect(
-                    candidate_frames,
-                    detector.short_range_detector,
+            def detect(
+                candidate_frames: list[Any],
+                rotation_degrees: int,
+            ) -> FaceTrackingResult:
+                full = (
+                    self._landmark_cache.detect(
+                        candidate_frames, detector, detector.full_range_detector, "full"
+                    )
+                    if use_cache
+                    else detector.detect(candidate_frames, detector.full_range_detector)
                 )
-            merged = (
-                self._merge_landmarks(full, short)
-                if short is not None
-                else list(full)
-            )
-            short_detected = (
-                self._count_landmarks(short) if short is not None else 0
-            )
-            face_mesh: list[Any] | None = None
-            if self._count_landmarks(merged) / len(candidate_frames) < 0.98:
-                face_mesh = self._detect_face_mesh(
-                    candidate_frames,
-                    detector_module=detector_module,
-                )
-                merged = self._merge_landmarks(merged, face_mesh)
-            face_mesh_detected = self._count_landmarks(face_mesh)
-            merged_detected = self._count_landmarks(merged)
-            upright_landmarks = self._count_upright_landmarks(merged)
-            return FaceTrackingResult(
-                frames=candidate_frames,
-                landmarks=merged,
-                diagnostics={
-                    "detector": "Auto-AVSR MediaPipe FaceDetection",
-                    "strategy": (
-                        "full_range"
-                        if short is None and face_mesh is None
-                        else (
-                            "full_range_plus_short_range_plus_facemesh_merge"
-                            if face_mesh is not None
-                            else "full_range_plus_short_range_frame_merge"
+                full_detected = self._count_landmarks(full)
+                full_ratio = full_detected / len(candidate_frames)
+
+                short: list[Any] | None = None
+                if full_ratio < 0.98:
+                    short = (
+                        self._landmark_cache.detect(
+                            candidate_frames, detector, detector.short_range_detector, "short"
                         )
-                    ),
-                    "rotation_degrees": rotation_degrees,
-                    "total_frames": len(candidate_frames),
-                    "full_range_detected_frames": full_detected,
-                    "full_range_detection_ratio": round(full_ratio, 4),
-                    "short_range_detected_frames": short_detected,
-                    "short_range_detection_ratio": round(
-                        short_detected / len(candidate_frames),
-                        4,
-                    ),
-                    "facemesh_detected_frames": face_mesh_detected,
-                    "facemesh_detection_ratio": round(
-                        face_mesh_detected / len(candidate_frames),
-                        4,
-                    ),
-                    "merged_detected_frames": merged_detected,
-                    "merged_detection_ratio": round(
-                        merged_detected / len(candidate_frames),
-                        4,
-                    ),
-                    "upright_landmark_frames": upright_landmarks,
-                    "upright_landmark_ratio": round(
-                        upright_landmarks / max(merged_detected, 1),
-                        4,
-                    ),
-                },
-            )
-
-        best = detect(frames_rgb, 0)
-        attempts = [dict(best.diagnostics)]
-
-        # OpenCV normally applies phone rotation metadata. Some MP4 encoders do
-        # not expose it consistently, so only try rotated copies when the
-        # upright dual-range pass is still weak.
-        if (
-            best.diagnostics["merged_detection_ratio"] < 0.5
-            or best.diagnostics["upright_landmark_ratio"] < 0.8
-        ):
-            rotations = (
-                (90, cv2.ROTATE_90_CLOCKWISE),
-                (270, cv2.ROTATE_90_COUNTERCLOCKWISE),
-                (180, cv2.ROTATE_180),
-            )
-            for degrees, rotate_code in rotations:
-                rotated = [
-                    cv2.rotate(frame, rotate_code) for frame in frames_rgb
-                ]
-                candidate = detect(rotated, degrees)
-                attempts.append(dict(candidate.diagnostics))
-                candidate_rank = (
-                    candidate.diagnostics["upright_landmark_frames"],
-                    candidate.diagnostics["full_range_detected_frames"],
-                    candidate.diagnostics["merged_detected_frames"],
+                        if use_cache
+                        else detector.detect(candidate_frames, detector.short_range_detector)
+                    )
+                merged = self._merge_landmarks(full, short) if short is not None else list(full)
+                short_detected = self._count_landmarks(short) if short is not None else 0
+                face_mesh: list[Any] | None = None
+                if self._count_landmarks(merged) / len(candidate_frames) < 0.98:
+                    face_mesh = self._detect_face_mesh(
+                        candidate_frames,
+                        detector_module=detector_module,
+                    )
+                    merged = self._merge_landmarks(merged, face_mesh)
+                face_mesh_detected = self._count_landmarks(face_mesh)
+                merged_detected = self._count_landmarks(merged)
+                upright_landmarks = self._count_upright_landmarks(merged)
+                return FaceTrackingResult(
+                    frames=candidate_frames,
+                    landmarks=merged,
+                    diagnostics={
+                        "detector": "Auto-AVSR MediaPipe FaceDetection",
+                        "strategy": (
+                            "full_range"
+                            if short is None and face_mesh is None
+                            else (
+                                "full_range_plus_short_range_plus_facemesh_merge"
+                                if face_mesh is not None
+                                else "full_range_plus_short_range_frame_merge"
+                            )
+                        ),
+                        "rotation_degrees": rotation_degrees,
+                        "total_frames": len(candidate_frames),
+                        "full_range_detected_frames": full_detected,
+                        "full_range_detection_ratio": round(full_ratio, 4),
+                        "short_range_detected_frames": short_detected,
+                        "short_range_detection_ratio": round(
+                            short_detected / len(candidate_frames),
+                            4,
+                        ),
+                        "facemesh_detected_frames": face_mesh_detected,
+                        "facemesh_detection_ratio": round(
+                            face_mesh_detected / len(candidate_frames),
+                            4,
+                        ),
+                        "merged_detected_frames": merged_detected,
+                        "merged_detection_ratio": round(
+                            merged_detected / len(candidate_frames),
+                            4,
+                        ),
+                        "upright_landmark_frames": upright_landmarks,
+                        "upright_landmark_ratio": round(
+                            upright_landmarks / max(merged_detected, 1),
+                            4,
+                        ),
+                    },
                 )
-                best_rank = (
-                    best.diagnostics["upright_landmark_frames"],
-                    best.diagnostics["full_range_detected_frames"],
-                    best.diagnostics["merged_detected_frames"],
-                )
-                if candidate_rank > best_rank:
-                    best = candidate
 
-        best.diagnostics["attempts"] = attempts
-        minimum_detected = max(3, math.ceil(len(frames_rgb) * 0.05))
-        best.diagnostics["minimum_detected_frames"] = minimum_detected
-        if best.diagnostics["merged_detected_frames"] < minimum_detected:
-            raise VideoValidationError(
-                "face_tracking_failed",
-                (
-                    "Chưa theo dõi đủ khuôn mặt để tạo vùng môi: "
-                    f"{best.diagnostics['merged_detected_frames']}/"
-                    f"{len(frames_rgb)} khung hình đạt yêu cầu. Hãy giữ trọn khuôn mặt "
-                    "trong khung, nhìn gần chính diện và tăng ánh sáng phía trước."
-                ),
-            )
-        if best.diagnostics["upright_landmark_frames"] < minimum_detected:
-            raise VideoValidationError(
-                "face_orientation_failed",
-                (
-                    "Đã tìm thấy mặt nhưng không xác định được hướng mặt thẳng "
-                    "để căn chỉnh môi. Hãy quay dọc/đứng đúng chiều và nhìn gần "
-                    "chính diện."
-                ),
-            )
-        return best
+            best = detect(frames_rgb, 0)
+            attempts = [dict(best.diagnostics)]
+
+            # OpenCV normally applies phone rotation metadata. Some MP4 encoders do
+            # not expose it consistently, so only try rotated copies when the
+            # upright dual-range pass is still weak.
+            if rotation_fallback and (
+                best.diagnostics["merged_detection_ratio"] < 0.5
+                or best.diagnostics["upright_landmark_ratio"] < 0.8
+            ):
+                rotations = (
+                    (90, cv2.ROTATE_90_CLOCKWISE),
+                    (270, cv2.ROTATE_90_COUNTERCLOCKWISE),
+                    (180, cv2.ROTATE_180),
+                )
+                for degrees, rotate_code in rotations:
+                    rotated = [cv2.rotate(frame, rotate_code) for frame in frames_rgb]
+                    candidate = detect(rotated, degrees)
+                    attempts.append(dict(candidate.diagnostics))
+                    candidate_rank = (
+                        candidate.diagnostics["upright_landmark_frames"],
+                        candidate.diagnostics["full_range_detected_frames"],
+                        candidate.diagnostics["merged_detected_frames"],
+                    )
+                    best_rank = (
+                        best.diagnostics["upright_landmark_frames"],
+                        best.diagnostics["full_range_detected_frames"],
+                        best.diagnostics["merged_detected_frames"],
+                    )
+                    if candidate_rank > best_rank:
+                        best = candidate
+
+            best.diagnostics["attempts"] = attempts
+            minimum_detected = max(3, math.ceil(len(frames_rgb) * 0.05))
+            best.diagnostics["minimum_detected_frames"] = minimum_detected
+            if best.diagnostics["merged_detected_frames"] < minimum_detected:
+                raise VideoValidationError(
+                    "face_tracking_failed",
+                    (
+                        "Chưa theo dõi đủ khuôn mặt để tạo vùng môi: "
+                        f"{best.diagnostics['merged_detected_frames']}/"
+                        f"{len(frames_rgb)} khung hình đạt yêu cầu. Hãy giữ trọn khuôn mặt "
+                        "trong khung, nhìn gần chính diện và tăng ánh sáng phía trước."
+                    ),
+                )
+            if best.diagnostics["upright_landmark_frames"] < minimum_detected:
+                raise VideoValidationError(
+                    "face_orientation_failed",
+                    (
+                        "Đã tìm thấy mặt nhưng không xác định được hướng mặt thẳng "
+                        "để căn chỉnh môi. Hãy quay dọc/đứng đúng chiều và nhìn gần "
+                        "chính diện."
+                    ),
+                )
+            return best
+
+        finally:
+            for name in ("full_range_detector", "short_range_detector"):
+                close = getattr(getattr(detector, name, None), "close", None)
+                if callable(close):
+                    close()
 
     @staticmethod
     def _detect_face_mesh(
@@ -448,14 +449,8 @@ class VideoPreprocessor:
 
                 def average(indices: tuple[int, ...]) -> list[float]:
                     return [
-                        float(
-                            np.mean([points[index].x for index in indices])
-                            * width
-                        ),
-                        float(
-                            np.mean([points[index].y for index in indices])
-                            * height
-                        ),
+                        float(np.mean([points[index].x for index in indices]) * width),
+                        float(np.mean([points[index].y for index in indices]) * height),
                     ]
 
                 recovered.append(
@@ -501,11 +496,7 @@ class VideoPreprocessor:
                 mouth_y = float(mouth[1])
             except (IndexError, TypeError, ValueError):
                 continue
-            if (
-                eye_dx >= max(eye_dy, 1.0)
-                and nose_y > eye_y
-                and mouth_y > nose_y
-            ):
+            if eye_dx >= max(eye_dy, 1.0) and nose_y > eye_y and mouth_y > nose_y:
                 count += 1
         return count
 
@@ -518,10 +509,7 @@ class VideoPreprocessor:
             return list(primary)
         if len(primary) != len(fallback):
             raise RuntimeError("Face detector passes returned different lengths.")
-        return [
-            main if main is not None else rescue
-            for main, rescue in zip(primary, fallback)
-        ]
+        return [main if main is not None else rescue for main, rescue in zip(primary, fallback)]
 
     def _read_at_target_fps(self, video_path: Path):
         import cv2
@@ -579,15 +567,12 @@ class VideoPreprocessor:
         if len(mouth_frames) > 1:
             motion = float(
                 np.abs(
-                    mouth_frames[1:].astype(np.float32)
-                    - mouth_frames[:-1].astype(np.float32)
+                    mouth_frames[1:].astype(np.float32) - mouth_frames[:-1].astype(np.float32)
                 ).mean()
             )
         return {
             "face_detection_ratio": (
-                round(face_detection_ratio, 4)
-                if face_detection_ratio is not None
-                else None
+                round(face_detection_ratio, 4) if face_detection_ratio is not None else None
             ),
             "brightness_mean": round(brightness, 2),
             "contrast_std": round(contrast, 2),
@@ -601,9 +586,7 @@ class VideoPreprocessor:
         warnings = []
         ratio = quality.get("face_detection_ratio")
         if ratio is not None and ratio < 0.9:
-            warnings.append(
-                "Khuôn mặt bị mất dấu ở một số khung hình; nên quay lại chính diện."
-            )
+            warnings.append("Khuôn mặt bị mất dấu ở một số khung hình; nên quay lại chính diện.")
         if quality["brightness_mean"] < 45:
             warnings.append("Video khá tối; hãy tăng ánh sáng phía trước mặt.")
         if quality["brightness_mean"] > 220:

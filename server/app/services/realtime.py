@@ -33,10 +33,7 @@ class LocalAgreement:
             common_count += 1
 
         candidate = current[:common_count]
-        if (
-            len(candidate) >= len(self.stable)
-            and candidate[: len(self.stable)] == self.stable
-        ):
+        if len(candidate) >= len(self.stable) and candidate[: len(self.stable)] == self.stable:
             self.stable = candidate
 
         stable_matches_current = current[: len(self.stable)] == self.stable
@@ -93,22 +90,25 @@ class ContinuousTranscript:
                 incoming[:size],
                 autojunk=False,
             ).ratio()
-            if ratio >= 0.75 and (
-                ratio > best_ratio or (ratio == best_ratio and size > best_size)
-            ):
+            if ratio >= 0.75 and (ratio > best_ratio or (ratio == best_ratio and size > best_size)):
                 best_size = size
                 best_ratio = ratio
         return [*base, *incoming[best_size:]]
 
 
-def decode_jpeg_frames(frame_payloads: list[bytes]) -> list[Any]:
+def decode_jpeg_frames(
+    frame_payloads: list[bytes],
+    strict: bool = False,
+    *,
+    rotation_degrees: int = 0,
+    max_width: int | None = None,
+) -> list[Any]:
     try:
         import cv2
         import numpy as np
     except ImportError as exc:
         raise RuntimeError(
-            "Video runtime is missing. Install requirements-cpu.txt "
-            "or requirements-gpu.txt."
+            "Video runtime is missing. Install requirements-cpu.txt or requirements-gpu.txt."
         ) from exc
 
     frames_rgb: list[Any] = []
@@ -116,7 +116,26 @@ def decode_jpeg_frames(frame_payloads: list[bytes]) -> list[Any]:
         encoded = np.frombuffer(payload, dtype=np.uint8)
         frame_bgr = cv2.imdecode(encoded, cv2.IMREAD_COLOR)
         if frame_bgr is None:
+            if strict:
+                raise VideoValidationError(
+                    "invalid_realtime_frame",
+                    "Khung hình JPEG bị lỗi; thời gian không được nén lại.",
+                )
             continue
+        rotations = {
+            90: cv2.ROTATE_90_CLOCKWISE,
+            180: cv2.ROTATE_180,
+            270: cv2.ROTATE_90_COUNTERCLOCKWISE,
+        }
+        if rotation_degrees in rotations:
+            frame_bgr = cv2.rotate(frame_bgr, rotations[rotation_degrees])
+        if max_width and frame_bgr.shape[1] > max_width:
+            height, width = frame_bgr.shape[:2]
+            frame_bgr = cv2.resize(
+                frame_bgr,
+                (max_width, round(height * max_width / width)),
+                interpolation=cv2.INTER_AREA,
+            )
         frames_rgb.append(cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB))
     if not frames_rgb:
         raise VideoValidationError(

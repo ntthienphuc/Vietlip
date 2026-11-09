@@ -58,7 +58,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
             const Text(
-              'Máy chủ suy luận',
+              'Kết nối máy chủ',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 10),
@@ -71,7 +71,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 hintText: 'http://192.168.1.20:7100',
                 prefixIcon: Icon(Icons.dns_outlined),
                 helperText:
-                    'Nhập địa chỉ LAN được hiển thị trong Lip Reader Server.',
+                    'Dùng địa chỉ Wi-Fi của PC, hoặc 127.0.0.1 khi đã kết nối USB.',
               ),
             ),
             const SizedBox(height: 12),
@@ -99,37 +99,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.check_circle, color: AppColors.primary),
+                        Icon(
+                          _health!['realtime_available'] == true
+                              ? Icons.check_circle
+                              : Icons.hourglass_top,
+                          color: AppColors.primary,
+                        ),
                         SizedBox(width: 8),
                         Text(
-                          'Đã kết nối máy chủ',
+                          _health!['realtime_available'] == true
+                              ? 'Sẵn sàng đọc môi'
+                              : 'Máy chủ chưa sẵn sàng live',
                           style: TextStyle(fontWeight: FontWeight.w800),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Mô hình: ${_health!['model_state'] ?? 'chưa rõ'} · '
-                      'Thiết bị: ${_health!['device'] ?? 'chưa rõ'} '
-                      '(${_health!['precision'] ?? 'chưa rõ'})\n'
-                      'LLM: ${_health!['llm_available'] == true ? _health!['llm_model'] : 'chưa cấu hình'}',
+                      _health!['realtime_available'] == true
+                          ? 'Trở về Đọc môi và bấm Bắt đầu live.'
+                          : 'Máy chủ đã phản hồi. Hãy chờ mô hình sẵn sàng rồi kiểm tra lại.',
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Phụ đề trực tiếp: ${_health!['realtime_available'] == true ? 'sẵn sàng' : 'chưa bật'}',
-                    ),
-                    if ((_health!['device'] ?? '').toString().startsWith(
-                      'cpu',
-                    )) ...[
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Máy chủ đang chạy CPU: vẫn suy luận đầy đủ, nhưng lượt '
-                        'xử lý đầu tiên sẽ chậm hơn vì phải nạp mô hình.',
-                        style: TextStyle(color: AppColors.muted),
+                    ExpansionTile(
+                      tilePadding: EdgeInsets.zero,
+                      title: const Text(
+                        'Chi tiết kỹ thuật',
+                        style: TextStyle(fontSize: 13),
                       ),
-                    ],
+                      children: [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Mô hình: ${_health!['model_state'] ?? 'chưa rõ'} · '
+                            '${_health!['model_id'] ?? ''}\n'
+                            'Thiết bị: ${_health!['device'] ?? 'chưa rõ'} · '
+                            '${_health!['precision'] ?? ''}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.muted,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -140,8 +154,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
             const SizedBox(height: 26),
             const Text(
-              'Cách hệ thống hoạt động',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+              'Khi sử dụng',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 10),
             const Card(
@@ -151,25 +165,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     _ArchitectureRow(
                       number: '1',
-                      title: 'Thu nhận video',
-                      detail: 'Quay đoạn nói ngắn, không thu âm.',
+                      title: 'Giữ rõ khuôn mặt',
+                      detail:
+                          'Cầm máy dọc, nhìn gần chính diện và chọn nơi đủ sáng.',
                     ),
                     _ArchitectureRow(
                       number: '2',
-                      title: 'Căn chỉnh miệng',
+                      title: 'Nói từng câu tự nhiên',
                       detail:
-                          'Hệ thống tự căn chỉnh khuôn mặt và tạo vùng môi chuẩn hóa ở 25 fps.',
+                          'Ứng dụng tự theo dõi môi và chốt đoạn khi bạn ngừng nói.',
                     ),
                     _ArchitectureRow(
                       number: '3',
-                      title: 'Auto-AVSR',
-                      detail: 'Conformer đọc chuỗi chuyển động môi tiếng Việt.',
-                    ),
-                    _ArchitectureRow(
-                      number: '4',
-                      title: 'Xác nhận kết quả',
+                      title: 'Đọc và kiểm tra phụ đề',
                       detail:
-                          'Hiển thị câu và ứng viên để người dùng xác nhận.',
+                          'Chữ gạch dưới còn có thể đổi. Phụ đề tự động có thể nhận sai.',
                       last: true,
                     ),
                   ],
@@ -185,8 +195,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(fontWeight: FontWeight.w800),
                 ),
                 subtitle: Text(
-                  'Máy chủ xóa tệp tạm sau mỗi lượt xử lý. Lịch sử văn bản chỉ lưu '
-                  'trên thiết bị; ứng dụng không tự tải dữ liệu lên để huấn luyện.',
+                  'Video lưu trên điện thoại có âm thanh để đối chiếu. Phụ đề live chỉ gửi hình ảnh tới máy chủ. '
+                  'Lịch sử lưu trên thiết bị; ứng dụng không tự dùng video để huấn luyện. ',
                 ),
               ),
             ),

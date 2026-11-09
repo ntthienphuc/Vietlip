@@ -52,8 +52,12 @@ class Settings:
     realtime_overlap_seconds: float
     realtime_max_seconds: float
     realtime_max_frame_bytes: int
+    realtime_decoder: str = "beam"
+    realtime_beam_size: int = 3
 
     def __post_init__(self) -> None:
+        if self.realtime_decoder not in {"beam", "greedy"} or self.realtime_beam_size < 1:
+            raise ValueError("Invalid realtime decoder configuration")
         if self.beam_size < 1:
             raise ValueError("LIP_BEAM_SIZE phải >= 1.")
         if not 1 <= self.nbest <= self.beam_size:
@@ -69,50 +73,29 @@ class Settings:
         if self.realtime_min_seconds <= 0:
             raise ValueError("LIP_REALTIME_MIN_SECONDS phải > 0.")
         if self.realtime_decode_interval_seconds < 0.5:
-            raise ValueError(
-                "LIP_REALTIME_DECODE_INTERVAL_SECONDS phải >= 0.5."
-            )
+            raise ValueError("LIP_REALTIME_DECODE_INTERVAL_SECONDS phải >= 0.5.")
         if self.realtime_window_seconds < self.realtime_min_seconds:
-            raise ValueError(
-                "LIP_REALTIME_WINDOW_SECONDS phải >= LIP_REALTIME_MIN_SECONDS."
-            )
+            raise ValueError("LIP_REALTIME_WINDOW_SECONDS phải >= LIP_REALTIME_MIN_SECONDS.")
         if not 0 <= self.realtime_overlap_seconds < self.realtime_window_seconds:
-            raise ValueError(
-                "LIP_REALTIME_OVERLAP_SECONDS phải nằm trong [0, window)."
-            )
+            raise ValueError("LIP_REALTIME_OVERLAP_SECONDS phải nằm trong [0, window).")
         if self.realtime_max_seconds < self.realtime_min_seconds:
-            raise ValueError(
-                "LIP_REALTIME_MAX_SECONDS phải >= LIP_REALTIME_MIN_SECONDS."
-            )
+            raise ValueError("LIP_REALTIME_MAX_SECONDS phải >= LIP_REALTIME_MIN_SECONDS.")
         if self.realtime_max_frame_bytes < 16 * 1024:
             raise ValueError("LIP_REALTIME_MAX_FRAME_BYTES quá nhỏ.")
 
     @classmethod
     def from_env(cls) -> "Settings":
         lip_reader_root = Path(__file__).resolve().parents[2]
-        workspace_root = lip_reader_root.parent
-        research_root = workspace_root / "Lip_Final"
-        model_root = (
-            research_root
-            / "02_PROJECT_MAIN"
-            / "main_code_results_phase"
-            / "baselines"
-            / "auto_avsr"
-        )
-        vocabulary_root = (
-            research_root
-            / "02_PROJECT_MAIN"
-            / "main_code_results_phase"
-            / "benchmark_v1"
-            / "vocabulary"
-        )
+        server_root = lip_reader_root / "server"
+        model_root = server_root / "vendor" / "auto_avsr"
+        vocabulary_root = server_root / "assets" / "tokenizers"
         return cls(
-            api_version="1.1.0",
+            api_version="1.2.0",
             model_id=os.getenv(
                 "LIP_MODEL_ID",
-                "auto-avsr-vi-release-2026.07",
+                "auto-avsr-vi-so_seed17",
             ),
-            model_backend=os.getenv("LIP_MODEL_BACKEND", "auto_avsr"),
+            model_backend=os.getenv("LIP_MODEL_BACKEND", "native_avsr"),
             model_load_on_startup=_as_bool(
                 os.getenv("LIP_MODEL_LOAD_ON_STARTUP"),
                 False,
@@ -120,26 +103,20 @@ class Settings:
             checkpoint_path=Path(
                 os.getenv(
                     "AUTO_AVSR_CHECKPOINT",
-                    str(
-                        research_root
-                        / "06_CHECKPOINT"
-                        / "epoch=13-step=55986-002.ckpt"
-                    ),
+                    str(server_root / "models" / "SO_seed17.pt"),
                 )
             ),
-            auto_avsr_root=Path(
-                os.getenv("AUTO_AVSR_ROOT", str(model_root))
-            ),
+            auto_avsr_root=Path(os.getenv("AUTO_AVSR_ROOT", str(model_root))),
             spm_model_path=Path(
                 os.getenv(
                     "VSR_SPM_MODEL",
-                    str(vocabulary_root / "vi_unigram_2000.model"),
+                    str(vocabulary_root / "vi.model"),
                 )
             ),
             spm_units_path=Path(
                 os.getenv(
                     "VSR_SPM_UNITS",
-                    str(vocabulary_root / "vi_unigram_2000.auto_avsr_units.txt"),
+                    str(vocabulary_root / "vi_units.txt"),
                 )
             ),
             device=os.getenv("LIP_DEVICE", "auto"),
@@ -149,9 +126,7 @@ class Settings:
                 True,
             ),
             cpu_threads=int(os.getenv("LIP_CPU_THREADS", "0")),
-            max_upload_bytes=int(
-                os.getenv("LIP_MAX_UPLOAD_BYTES", str(100 * 1024 * 1024))
-            ),
+            max_upload_bytes=int(os.getenv("LIP_MAX_UPLOAD_BYTES", str(100 * 1024 * 1024))),
             max_frames=int(os.getenv("LIP_MAX_FRAMES", "1125")),
             min_frames=int(os.getenv("LIP_MIN_FRAMES", "8")),
             target_fps=float(os.getenv("LIP_TARGET_FPS", "25")),
@@ -162,43 +137,33 @@ class Settings:
             llm_provider=os.getenv(
                 "LIP_LLM_PROVIDER",
                 "openai_compatible",
-            ).strip().lower(),
+            )
+            .strip()
+            .lower(),
             llm_base_url=os.getenv("LIP_LLM_BASE_URL") or None,
             llm_api_key=os.getenv("LIP_LLM_API_KEY") or None,
             llm_model=os.getenv("LIP_LLM_MODEL") or None,
             llm_timeout_seconds=float(os.getenv("LIP_LLM_TIMEOUT_SECONDS", "45")),
             llm_num_ctx=int(os.getenv("LIP_LLM_NUM_CTX", "2048")),
-            llm_max_output_tokens=int(
-                os.getenv("LIP_LLM_MAX_OUTPUT_TOKENS", "320")
-            ),
+            llm_max_output_tokens=int(os.getenv("LIP_LLM_MAX_OUTPUT_TOKENS", "320")),
             llm_keep_alive=os.getenv("LIP_LLM_KEEP_ALIVE", "0"),
             max_queued_jobs=int(os.getenv("LIP_MAX_QUEUED_JOBS", "8")),
-            job_retention_seconds=int(
-                os.getenv("LIP_JOB_RETENTION_SECONDS", "1800")
-            ),
+            job_retention_seconds=int(os.getenv("LIP_JOB_RETENTION_SECONDS", "1800")),
             realtime_enabled=_as_bool(
                 os.getenv("LIP_REALTIME_ENABLED"),
                 True,
             ),
-            realtime_sample_fps=float(
-                os.getenv("LIP_REALTIME_SAMPLE_FPS", "8")
-            ),
-            realtime_min_seconds=float(
-                os.getenv("LIP_REALTIME_MIN_SECONDS", "2.0")
-            ),
+            realtime_sample_fps=float(os.getenv("LIP_REALTIME_SAMPLE_FPS", "25")),
+            realtime_min_seconds=float(os.getenv("LIP_REALTIME_MIN_SECONDS", "2.0")),
             realtime_decode_interval_seconds=float(
-                os.getenv("LIP_REALTIME_DECODE_INTERVAL_SECONDS", "2.0")
+                os.getenv("LIP_REALTIME_DECODE_INTERVAL_SECONDS", "1.5")
             ),
-            realtime_window_seconds=float(
-                os.getenv("LIP_REALTIME_WINDOW_SECONDS", "6.0")
-            ),
-            realtime_overlap_seconds=float(
-                os.getenv("LIP_REALTIME_OVERLAP_SECONDS", "1.0")
-            ),
-            realtime_max_seconds=float(
-                os.getenv("LIP_REALTIME_MAX_SECONDS", "300")
-            ),
+            realtime_window_seconds=float(os.getenv("LIP_REALTIME_WINDOW_SECONDS", "6.0")),
+            realtime_overlap_seconds=float(os.getenv("LIP_REALTIME_OVERLAP_SECONDS", "1.0")),
+            realtime_max_seconds=float(os.getenv("LIP_REALTIME_MAX_SECONDS", "300")),
             realtime_max_frame_bytes=int(
                 os.getenv("LIP_REALTIME_MAX_FRAME_BYTES", str(1024 * 1024))
             ),
+            realtime_decoder=os.getenv("LIP_REALTIME_DECODER", "beam"),
+            realtime_beam_size=int(os.getenv("LIP_REALTIME_BEAM_SIZE", "3")),
         )

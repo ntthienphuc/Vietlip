@@ -76,9 +76,7 @@ class MockEngine:
                 "input_kind": input_kind,
                 "quality": {"face_detection_ratio": 1.0},
                 "context_hint_applied": False,
-                "warnings": [
-                    "Kết quả cần được người dùng kiểm tra trước khi sử dụng."
-                ],
+                "warnings": ["Kết quả cần được người dùng kiểm tra trước khi sử dụng."],
             },
         )
 
@@ -102,8 +100,6 @@ class MockEngine:
                 "source_fps": source_fps,
                 "streaming_preview": True,
                 "context_hint_applied": False,
-                "warnings": [
-                    "Phụ đề trực tiếp cần được người dùng kiểm tra trước khi sử dụng."
-                ],
+                "warnings": ["Phụ đề trực tiếp cần được người dùng kiểm tra trước khi sử dụng."],
             },
         )

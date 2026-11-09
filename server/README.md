@@ -1,4 +1,30 @@
+# Current application runtime (LipLens 1.5.0)
+
+Start `run_realtime.ps1` for the tested SO17 native runtime. Model startup and
+visual-activity preparation finish before live connections are accepted. See the
+root README and `docs/ARCHITECTURE.md` for the current workflow; older CLI/model
+adapters described below remain for compatibility and experiments.
+
+Runtime checks: `.venv/Scripts/python.exe -m ruff check app`,
+`.venv/Scripts/python.exe -m ruff format --check app`, and
+`.venv/Scripts/python.exe -m pytest -q`. Keep formatter changes out of vendor code.
+
+## Historical server notes
+
+The following sections describe older adapters and launchers. Use the root README for the installed application.
+
 # Lip Reader API
+
+> **Cấu hình ứng dụng 1.4.0 (2026-11-06):** chạy `run_realtime.ps1`, native SO_seed17, CUDA float32, WebSocket 2 ở 25 fps. `raw_face` mặc định tự endpoint bằng chuyển động môi. Xem README gốc và `docs/AUTO_LIVE_2026-11-06.md`. Phần tài liệu 1.1 bên dưới có đường dẫn D:, Lip_Final, Ollama và launcher full-stack cũ.
+
+`start` nhận `auto_endpoint: true` để bật gate (mặc định cho raw_face).
+`mouth_roi` mặc định giữ chế độ cửa sổ cũ; bật auto rõ ràng khi replay dữ liệu đã căn miệng.
+Server trả `ready.auto_endpoint`, `activity` (speech_start/speech_end/endpoint_reason),
+`telemetry` (recognition_state, decoder_state, capture_fps), `partial`,
+`segment_final` tự động và `session_final` khi client gửi stop.
+`activity_detector=estimated_lip_motion_v1` là ước lượng hình học, không phải xác suất
+đang nói đã hiệu chuẩn. Camera không dừng sau segment_final. Không dùng audio hoặc
+transcript tham chiếu cho detector. `auto_endpoint: false` chỉ dành cho so sánh phát triển.
 
 FastAPI CPU-capable, GPU-preferred cho Auto-AVSR tiếng Việt. API nhận một MP4, căn mặt/crop
 miệng bằng đúng implementation MediaPipe của Auto-AVSR, đưa về 25 fps và

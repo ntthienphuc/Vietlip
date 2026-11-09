@@ -1,6 +1,7 @@
 param(
     [ValidateSet("api", "cpu", "gpu")]
-    [string]$Runtime = "cpu"
+    [string]$Runtime = "cpu",
+    [string]$Python = ''
 )
 
 $ErrorActionPreference = "Stop"
@@ -8,7 +9,9 @@ $serverRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $venvRoot = Join-Path $serverRoot ".venv"
 $pythonExe = Join-Path $venvRoot "Scripts\python.exe"
 if (-not (Test-Path -LiteralPath $pythonExe)) {
-    python -m venv $venvRoot
+    if ($Python) { & $Python -m venv $venvRoot }
+    else { py -3.11 -m venv $venvRoot }
+    if ($LASTEXITCODE -ne 0) { throw 'Python 3.11 is required. Pass -Python with its executable path.' }
 }
 & $pythonExe -m pip install --upgrade pip
 switch ($Runtime) {
@@ -16,12 +19,17 @@ switch ($Runtime) {
         & $pythonExe -m pip install -r (Join-Path $serverRoot "requirements-api.txt")
     }
     "cpu" {
-        & $pythonExe -m pip install -r (Join-Path $serverRoot "requirements-cpu.txt")
+        & $pythonExe -m pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu
+        if ($LASTEXITCODE -ne 0) { throw 'PyTorch CPU installation failed.' }
+        & $pythonExe -m pip install -r (Join-Path $serverRoot "requirements-native.txt")
     }
     "gpu" {
-        & $pythonExe -m pip install -r (Join-Path $serverRoot "requirements-gpu.txt")
+        & $pythonExe -m pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cu126
+        if ($LASTEXITCODE -ne 0) { throw 'PyTorch CUDA installation failed.' }
+        & $pythonExe -m pip install -r (Join-Path $serverRoot "requirements-native.txt")
     }
 }
+if ($LASTEXITCODE -ne 0) { throw 'Server dependency installation failed.' }
 
 $assetDirectory = Join-Path $serverRoot "assets"
 $meanFacePath = Join-Path $assetDirectory "20words_mean_face.npy"
@@ -40,4 +48,5 @@ if ($actualMeanFaceHash -ne $expectedMeanFaceHash) {
 
 Write-Host "$Runtime environment ready."
 Write-Host "CPU model runtime (default): .\\setup_server.ps1 -Runtime cpu"
-Write-Host "GPU runtime: install official CUDA PyTorch, then requirements-gpu.txt"
+Write-Host "GPU runtime: .\setup_server.ps1 -Runtime gpu"
+Write-Host "Start the application server: .\run_realtime.ps1"

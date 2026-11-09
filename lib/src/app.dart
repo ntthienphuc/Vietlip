@@ -88,7 +88,7 @@ class _LipReaderAppState extends State<LipReaderApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Đọc môi Việt',
+      title: 'LipLens',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       routerConfig: _router,

@@ -52,9 +52,7 @@ class DisabledLlmPostprocessor:
             assisted_transcript=None,
             diagnostics={
                 "status": "unavailable",
-                "message": (
-                    "Server chưa cấu hình LIP_LLM_BASE_URL và LIP_LLM_MODEL."
-                ),
+                "message": ("Server chưa cấu hình LIP_LLM_BASE_URL và LIP_LLM_MODEL."),
             },
         )
 
@@ -131,18 +129,15 @@ class _HttpLlmPostprocessor:
         )
         if mode == "context_select":
             return (
-                prefix
-                + "Chỉ chọn đúng một câu trong visual_candidates dựa trên "
+                prefix + "Chỉ chọn đúng một câu trong visual_candidates dựa trên "
                 "user_context. Ưu tiên ứng viên có cấu trúc ngữ nghĩa khớp "
                 "ngữ cảnh, ví dụ 'tôi tên là ...' khi ngữ cảnh nêu tên người "
                 "nói. Không được sửa hoặc tạo câu mới. Trả object JSON "
                 "gồm selected_index (số nguyên) và reason (lý do tối đa 20 từ). "
-                "Evidence: "
-                + evidence
+                "Evidence: " + evidence
             )
         return (
-            prefix
-            + "Người dùng đã chấp nhận chế độ suy đoán. Đề xuất một câu tiếng "
+            prefix + "Người dùng đã chấp nhận chế độ suy đoán. Đề xuất một câu tiếng "
             "Việt tự nhiên dựa trên bằng chứng. Chuẩn hóa viết hoa và dấu câu; "
             "chỉ sửa từ khi candidates và context cùng hỗ trợ. Nếu từ đã đúng, "
             "vẫn trả một câu hoàn chỉnh có viết hoa và dấu câu tự nhiên. "
@@ -156,8 +151,7 @@ class _HttpLlmPostprocessor:
             "phép tạo 'Tôi tên là An Bình'. Được thêm hoặc bỏ hư từ ngắn để câu tự nhiên, nhưng "
             "không thêm mệnh đề hay sự kiện mới. Không thêm chi tiết nào khác "
             "ngoài ngữ cảnh. Trả object JSON "
-            "gồm assisted_transcript và reason (lý do tối đa 20 từ). Evidence: "
-            + evidence
+            "gồm assisted_transcript và reason (lý do tối đa 20 từ). Evidence: " + evidence
         )
 
     @staticmethod
@@ -346,10 +340,7 @@ class OllamaLlmPostprocessor(_HttpLlmPostprocessor):
                 response = await client.get(f"{self.base_url}/api/tags")
                 response.raise_for_status()
                 models = response.json().get("models", [])
-            available_names = {
-                str(item.get("name") or item.get("model"))
-                for item in models
-            }
+            available_names = {str(item.get("name") or item.get("model")) for item in models}
             return self.model_label in available_names
         except (httpx.HTTPError, ValueError, TypeError):
             return False
@@ -463,9 +454,7 @@ class MockLlmPostprocessor:
     ) -> LlmResult:
         return LlmResult(
             assisted_transcript=(
-                alternatives[-1]["text"]
-                if mode == "context_select"
-                else f"{visual_transcript} nhé"
+                alternatives[-1]["text"] if mode == "context_select" else f"{visual_transcript} nhé"
             ),
             diagnostics={"status": "ok", "mock": True},
         )
@@ -484,9 +473,7 @@ def create_llm_postprocessor(settings: Settings) -> LlmPostprocessor:
             keep_alive=settings.llm_keep_alive,
         )
     if settings.llm_provider != "openai_compatible":
-        raise ValueError(
-            "LIP_LLM_PROVIDER phải là ollama hoặc openai_compatible."
-        )
+        raise ValueError("LIP_LLM_PROVIDER phải là ollama hoặc openai_compatible.")
     return OpenAICompatibleLlmPostprocessor(
         base_url=settings.llm_base_url,
         api_key=settings.llm_api_key,
@@ -555,26 +542,17 @@ def _validate_assisted_transcript(
 ) -> dict[str, Any]:
     """Reject free-form answers that are not grounded in visual/context text."""
     assisted_tokens = _word_tokens(assisted)
-    candidate_tokens = {
-        token
-        for candidate in candidates
-        for token in _word_tokens(candidate)
-    }
+    candidate_tokens = {token for candidate in candidates for token in _word_tokens(candidate)}
     context_tokens = set(_word_tokens(context_hint))
     new_tokens = sorted(
         {
             token
             for token in assisted_tokens
-            if token not in candidate_tokens
-            and token not in _ALLOWED_ASSIST_FUNCTION_WORDS
+            if token not in candidate_tokens and token not in _ALLOWED_ASSIST_FUNCTION_WORDS
         }
     )
-    unsupported_tokens = [
-        token for token in new_tokens if token not in context_tokens
-    ]
-    candidate_sequences = [
-        " ".join(_word_tokens(candidate)) for candidate in candidates
-    ]
+    unsupported_tokens = [token for token in new_tokens if token not in context_tokens]
+    candidate_sequences = [" ".join(_word_tokens(candidate)) for candidate in candidates]
     assisted_sequence = " ".join(assisted_tokens)
     similarity = max(
         (
