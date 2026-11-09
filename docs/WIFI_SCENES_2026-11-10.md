@@ -94,6 +94,13 @@ The Android APK is 1.6.2+14, package/signing identity unchanged, with a successf
 release build and SHA-256 matched after download over the LAN page. Windows
 installer 1.6.0 remains the last complete installer; the receipt/shutdown fix is
 a local server patch for this test iteration, not a newly validated full installer.
+The installed baseline source and manifest were backed up before the single-file
+patch, and the updated manifest explicitly records its provenance. Verification
+checked all 11,920 payload files with no mismatch. The restarted service reports
+SO17/CUDA ready. A 90-frame prerecorded PC-to-LAN replay with the real model
+received all 3/3 caption receipts, including the session-stop tail before
+`session_final`. Those client receipts were simulated; they are not evidence of
+rendering on the physical phone.
 
 Private raw traces, confirmed references, SHA-256 receipts, and detailed outputs
 are local under `artifacts/wifi_live_20261109_round01`; video and transcripts
