@@ -11,6 +11,14 @@ class MainActivity : FlutterActivity() {
     private val recordingExporter by lazy { RecordingExporter(this) }
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "vn.lipread/app_info")
+            .setMethodCallHandler { call, result ->
+                if (call.method == "getVersion") {
+                    result.success(packageManager.getPackageInfo(packageName, 0).versionName)
+                } else {
+                    result.notImplemented()
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "vn.lipread/recordings")
             .setMethodCallHandler(recordingExporter::handle)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger,"vn.lipread/frame_encoder")

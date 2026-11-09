@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../data/app_info.dart';
 import '../../data/lip_reader_api.dart';
 import '../../data/settings_controller.dart';
 import '../../theme/app_theme.dart';
@@ -15,6 +16,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  late final Future<String?> _appVersion = AppInfo.version();
   late final TextEditingController _urlController = TextEditingController(
     text: widget.settings.apiUrl,
   );
@@ -204,14 +206,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 22),
-            const ListTile(
+            ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: BrandMark(),
-              title: Text(
-                '${AppBrand.name} ${AppBrand.version}',
-                style: TextStyle(fontWeight: FontWeight.w800),
+              leading: const BrandMark(),
+              title: FutureBuilder<String?>(
+                future: _appVersion,
+                builder: (context, snapshot) => Text(
+                  snapshot.data?.isNotEmpty == true
+                      ? '${AppBrand.name} ${snapshot.data}'
+                      : AppBrand.name,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
               ),
-              subtitle: Text('Đọc môi tiếng Việt · bản thử nghiệm'),
+              subtitle: const Text('Đọc môi tiếng Việt · bản thử nghiệm'),
             ),
             const SizedBox(height: 12),
             const Card(

@@ -4,7 +4,6 @@ import '../theme/app_theme.dart';
 
 abstract final class AppBrand {
   static const name = 'VietLip';
-  static const version = '1.6.0';
   static const tagline = 'Nhìn chuyển động · đọc lời nói';
 }
 

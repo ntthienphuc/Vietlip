@@ -104,6 +104,8 @@ rendering on the physical phone.
 
 Private raw traces, confirmed references, SHA-256 receipts, and detailed outputs
 are local under `artifacts/wifi_live_20261109_round01`; video and transcripts
-remain excluded from Git. Videos for these three scenes have not yet reached the
-PC. The LAN exchange at port 7101 accepts explicitly selected recordings; the
-recognition service remains at port 7100. The optimization goal remains active.
+remain excluded from Git. The three source videos were subsequently exported
+from the physical phone and retrieved, with matching phone/PC hashes and full
+audio/video decode verification. See [the follow-up activity comparison](VISUAL_ACTIVITY_2026-11-10.md).
+The recognition service remains at port 7100. No new speech gate has yet been
+enabled; the optimization goal remains active.
