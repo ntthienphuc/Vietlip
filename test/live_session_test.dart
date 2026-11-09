@@ -7,6 +7,65 @@ import 'package:lip_reader/src/data/live_lip_session.dart';
 
 void main() {
   test(
+    'stop still acknowledges the final rendered caption before closing',
+    () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      WebSocket? peer;
+      Map<String, dynamic>? receipt;
+      Timer? fallback;
+      final listener = server.listen((request) async {
+        peer = await WebSocketTransformer.upgrade(request);
+        peer!.listen((event) {
+          final control = jsonDecode(event as String) as Map<String, dynamic>;
+          void finish() => peer!.add(
+            jsonEncode({'type': 'session_final', 'transcript': 'xin chào'}),
+          );
+          if (control['type'] == 'start') {
+            peer!.add(jsonEncode({'type': 'ready', 'protocol': 2}));
+          } else if (control['type'] == 'stop') {
+            peer!.add(
+              jsonEncode({
+                'type': 'segment_final',
+                'caption_event_id': 9,
+                'transcript': 'xin chào',
+                'stable_transcript': 'xin chào',
+              }),
+            );
+            fallback = Timer(const Duration(milliseconds: 400), finish);
+          } else if (control['type'] == 'caption_rendered') {
+            receipt = control;
+            fallback?.cancel();
+            finish();
+          }
+        });
+      });
+      final session = LiveLipSession('http://127.0.0.1:${server.port}');
+      final updates = session.updates.listen((update) {
+        if (update.captionEventId != null) {
+          Future<void>.delayed(const Duration(milliseconds: 20), () {
+            session.acknowledgeCaptionFrame(update);
+          });
+        }
+      });
+      try {
+        await session.connect();
+        final finishing = session.stop();
+        expect(session.canSendFrame, isFalse);
+        expect(await finishing.timeout(const Duration(seconds: 2)), 'xin chào');
+        expect(receipt?['caption_event_id'], 9);
+        expect(receipt?['receive_to_frame_ms'], greaterThanOrEqualTo(15));
+      } finally {
+        fallback?.cancel();
+        await updates.cancel();
+        await session.dispose();
+        await peer?.close();
+        await listener.cancel();
+        await server.close(force: true);
+      }
+    },
+  );
+
+  test(
     'caption frame receipt echoes its ID after delivery without sending text',
     () async {
       final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);

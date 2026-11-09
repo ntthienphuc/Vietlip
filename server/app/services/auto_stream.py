@@ -49,6 +49,8 @@ class AutoStream:
         )
         self.timeline, self.evidence = AgreementTimeline(), LiveEvidence()
         self.delivery = CaptionDelivery()
+        self.render_receipts = start.get("caption_render_receipts") is True
+        self.receipt_event = asyncio.Event()
         self.trace = LiveTrace()
         self.detector, self.gate = VisualMotionDetector(self.kind), EndpointPolicy()
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="lip-activity")
@@ -202,6 +204,23 @@ class AutoStream:
             turn = self.pending.popleft() if endpoint else self.current
             if turn is None:
                 if self.monitor_done:
+                    # The camera may already be stopped while Flutter is still
+                    # drawing the last caption. Keep receiving receipts until
+                    # that caption is acknowledged, with a short hard deadline.
+                    if self.render_receipts:
+                        deadline = time.monotonic() + 0.3
+                        while (
+                            self.delivery.sequence in self.delivery.pending
+                            and not self.disconnected
+                        ):
+                            self.receipt_event.clear()
+                            remaining = deadline - time.monotonic()
+                            if remaining <= 0:
+                                break
+                            try:
+                                await asyncio.wait_for(self.receipt_event.wait(), timeout=remaining)
+                            except asyncio.TimeoutError:
+                                break
                     await self.send(
                         dict(
                             type="session_final",
@@ -391,11 +410,22 @@ class AutoStream:
             )
             tasks = [monitor, worker]
             while not self.disconnected:
-                message = await asyncio.wait_for(self.ws.receive(), timeout=15)
+                if worker.done():
+                    break
+                try:
+                    message = await asyncio.wait_for(
+                        self.ws.receive(), timeout=0.1 if self.capture_closed else 15
+                    )
+                except asyncio.TimeoutError:
+                    if self.capture_closed:
+                        continue
+                    raise
                 if message["type"] == "websocket.disconnect":
                     self.disconnected = True
                     break
                 if message.get("bytes") is not None:
+                    if self.capture_closed:
+                        continue
                     packet = message["bytes"]
                     if len(packet) > self.config.realtime_max_frame_bytes + 16:
                         await self.ws.close(code=1009)
@@ -418,11 +448,14 @@ class AutoStream:
                 elif message.get("text"):
                     control = json.loads(message["text"])
                     if control.get("type") == "stop":
-                        break
+                        self.capture_closed = True
+                        self.event.set()
+                        continue
                     if control.get("type") == "caption_rendered":
                         receipt = self.delivery.acknowledge(control)
                         if receipt is not None:
                             self.trace.record(receipt)
+                            self.receipt_event.set()
             self.capture_closed = True
             await asyncio.gather(*tasks)
         except (WebSocketDisconnect, asyncio.TimeoutError):

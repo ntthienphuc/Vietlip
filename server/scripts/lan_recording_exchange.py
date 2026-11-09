@@ -10,6 +10,7 @@ import hashlib
 import json
 import logging
 from pathlib import Path
+import re
 import shutil
 import sys
 from uuid import uuid4
@@ -26,8 +27,8 @@ background:#0e7775;color:white;padding:12px 18px;font:inherit;text-decoration:no
 input,select{font:inherit;max-width:100%;margin:10px 0}button:disabled{opacity:.5}progress{width:100%}
 small{color:#4e666b}#status{white-space:pre-wrap}</style><main>
 <h1>VietLip</h1><p>Chuyển bản ghi thử nghiệm tới PC qua Wi-Fi.</p>
-<section><h2>1. Cập nhật ứng dụng</h2><p>Bản 1.6.1 bổ sung nút xuất video.
-Cài cập nhật để giữ lịch sử hiện có.</p><a href="/app.apk">Tải APK VietLip 1.6.1</a>
+<section><h2>1. Cập nhật ứng dụng</h2><p>Bản __VERSION__ có nút xuất video.
+Cài cập nhật để giữ lịch sử hiện có.</p><a href="/app.apk">Tải APK VietLip __VERSION__</a>
 <p>Trong app: <b>Lịch sử → chọn phiên → Lưu video ra máy</b>. Chọn thư mục Downloads.</p></section>
 <section><h2>2. Gửi video đã xuất</h2><p>Video có âm thanh được gửi tới PC này để đối chiếu.
 Nhận dạng đọc môi vẫn chỉ dùng hình ảnh.</p><form id="form">
@@ -54,10 +55,12 @@ req.send(new FormData(form));};</script>"""
 def create_app(apk: Path, output: Path, max_bytes: int = 200 * 1024 * 1024) -> FastAPI:
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
     output.mkdir(parents=True, exist_ok=True)
+    version = re.search(r"VietLip-(\d+\.\d+\.\d+)", apk.name)
+    page = PAGE.replace("__VERSION__", version.group(1) if version else "Android")
 
     @app.get("/", response_class=HTMLResponse)
     async def index():
-        return PAGE
+        return page
 
     @app.get("/healthz")
     async def health():
@@ -68,7 +71,7 @@ def create_app(apk: Path, output: Path, max_bytes: int = 200 * 1024 * 1024) -> F
         if not apk.is_file():
             raise HTTPException(503, "Bản cập nhật chưa sẵn sàng. Hãy thử lại sau.")
         return FileResponse(
-            apk, filename="VietLip-1.6.1.apk", media_type="application/vnd.android.package-archive"
+            apk, filename=apk.name, media_type="application/vnd.android.package-archive"
         )
 
     @app.post("/upload", status_code=201)

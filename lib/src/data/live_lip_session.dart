@@ -218,6 +218,7 @@ class LiveLipSession {
           'protocol': 2,
           'input_kind': 'raw_face',
           'auto_endpoint': true,
+          'caption_render_receipts': true,
           'rotation_degrees': rotationDegrees,
         }),
       );
@@ -284,7 +285,11 @@ class LiveLipSession {
   /// Called after Flutter finishes the frame containing this exact caption.
   /// No wall-clock synchronization or extra camera timestamps are required.
   void acknowledgeCaptionFrame(LiveLipUpdate update) {
-    if (!isConnected ||
+    // Stopping capture does not close the socket: the final caption can still
+    // be drawn while we wait for session_final.
+    if (_channel == null ||
+        _closed ||
+        !_readyConfirmed ||
         update.captionEventId == null ||
         update.receiptClock == null) {
       return;

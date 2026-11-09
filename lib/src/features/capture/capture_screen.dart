@@ -86,6 +86,10 @@ class _CaptureScreenState extends State<CaptureScreen>
   Map<String, dynamic> _liveEvidence = const {};
 
   bool get _isRecording => _camera?.value.isRecordingVideo == true;
+  bool get _showLiveSession =>
+      _livePreviewEnabled &&
+      (_isRecording ||
+          (_changingRecording && _liveWasActive && _liveSession != null));
   Duration get _activeMaxDuration =>
       _livePreviewEnabled ? _maxLiveDuration : _maxFullClipDuration;
   bool get _canRunFullClip =>
@@ -443,7 +447,7 @@ class _CaptureScreenState extends State<CaptureScreen>
         // Acknowledge only captions present in this session's rendered state.
         if (mounted &&
             _foreground &&
-            _isRecording &&
+            _showLiveSession &&
             WidgetsBinding.instance.lifecycleState ==
                 AppLifecycleState.resumed &&
             ModalRoute.of(context)?.isCurrent != false &&
@@ -534,13 +538,13 @@ class _CaptureScreenState extends State<CaptureScreen>
     await _nativeFrames?.cancel();
     _nativeFrames = null;
     final session = _liveSession;
-    _liveSession = null;
     if (session != null) {
       for (var attempt = 0; attempt < 10 && _encodingLiveFrame; attempt++) {
         await Future<void>.delayed(const Duration(milliseconds: 50));
       }
     }
     final finalTranscript = session == null ? null : await session.stop();
+    if (identical(session, _liveSession)) _liveSession = null;
     if (session != null) {
       debugPrint(
         'Lip transport: rejected_stale_timestamps=${session.rejectedTimestampFrames}',
@@ -729,20 +733,20 @@ class _CaptureScreenState extends State<CaptureScreen>
 
   @override
   Widget build(BuildContext context) {
-    if (_isRecording && _livePreviewEnabled) {
+    if (_showLiveSession) {
       return LiveCaptureLayout(
-        header: const Wrap(
+        header: Wrap(
           spacing: 10,
           runSpacing: 4,
           crossAxisAlignment: WrapCrossAlignment.center,
           alignment: WrapAlignment.spaceBetween,
           children: [
-            BrandMark(size: 30),
+            const BrandMark(size: 30),
             Text(
-              'Đang live',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              _isRecording ? 'Đang live' : 'Đang chốt phụ đề',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
-            Text(
+            const Text(
               'Chỉ dùng hình ảnh',
               style: TextStyle(fontSize: 12, color: AppColors.muted),
             ),
