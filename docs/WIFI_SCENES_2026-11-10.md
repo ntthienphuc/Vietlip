@@ -1,5 +1,11 @@
 # VietLip: Wi-Fi scenes 2 and 3, 2026-11-10
 
+Later verification: the installed 1.6.3 app now has a physical LAN test showing
+8/8 real caption receipts, including newly added final text after camera stop.
+See [the frozen-caption and phone-receipt follow-up](FROZEN_WIFI_CAPTIONS_2026-11-10.md).
+This supersedes the pending physical receipt check below; recognition still
+uses SO17 and the experimental visual confirmation gate remains disabled.
+
 The speaker confirmed scene 2 contained exactly the four scripted sentences,
 and scene 3 contained no speech. The production profile remained SO17 float32,
 beam 3, CTC 0.1, a six-second window, and one-second visual endpoint debounce.

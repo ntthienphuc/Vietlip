@@ -45,3 +45,20 @@ or measures phone display latency. They do not validate short utterances or
 non-speech smiling/head turns without corresponding source recordings.
 Input crops and source videos remain under ignored `artifacts/` directories.
 Commands refuse to overwrite existing results.
+
+## Frozen caption follow-up
+
+Run from the repository root:
+
+```powershell
+server/.venv/Scripts/python.exe server/experiments/visual_activity_probe/frozen_captions.py --scenes artifacts/wifi_live_20261109_round01 --probes artifacts/visual_vad_20261110 --checkpoint server/models/SO_seed17.pt --output <new-output-directory>
+server/.venv/Scripts/python.exe server/experiments/visual_activity_probe/checkpoint_captions.py --frozen <previous-output-directory> --scenes artifacts/wifi_live_20261109_round01 --models server/models --output <new-candidate-directory>
+server/.venv/Scripts/python.exe server/experiments/visual_activity_probe/short_turn_audit.py --probes artifacts/visual_vad_20261110 --output <new-short-audit.json>
+```
+
+The first command copies archived window times onto the MP4 clock as a declared
+replay convention. It does not claim to reconstruct the original native JPEGs
+or capture-clock offset. Candidate checkpoint comparisons verify and reuse the
+same aligned tensors. The short audit uses existing visual suffixes, not newly
+spoken complete short phrases. See `docs/FROZEN_WIFI_CAPTIONS_2026-11-10.md` for
+the decision and limitations. None of these modules runs inside the live server.

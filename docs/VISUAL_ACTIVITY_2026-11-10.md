@@ -1,5 +1,10 @@
 # VietLip visual activity: complete-recording check
 
+Follow-up: [frozen complete-caption comparison and physical phone stop receipt](FROZEN_WIFI_CAPTIONS_2026-11-10.md).
+The new paired replay confirms suppression of seven inserted units, with
+unchanged speech captions, but also exposes a strict-confirmation failure on
+short speech fragments. The candidate is still not deployed.
+
 ## Latest: all three Wi-Fi source recordings retrieved
 
 VietLip 1.6.2+14 was installed over 1.6.0+12 on the connected Samsung SM-G965F.
