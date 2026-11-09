@@ -55,6 +55,11 @@ Xem [kết quả và giới hạn của phiên mới](docs/VISUAL_CONFIRMATION_A
 Các phép thử checkpoint và nhánh âm vị vẫn ủng hộ giữ SO17. Độ trễ 2–3 giây
 là mục tiêu, chưa phải bảo đảm cho mọi câu và cấu hình.
 
+Đã kiểm thêm hướng ảnh và cách chấm đáp án trên 209 cửa sổ của tám video.
+Các biến thể gây hồi quy hoặc không giảm tổng lỗi và tăng thời gian xử lý;
+[kết quả đối chiếu](docs/ORIENTATION_AUDIT_2026-11-10.md) giữ nguyên cấu hình
+và bộ cài hiện tại. Đây là điểm chốt của đợt tối ưu với dữ liệu đang có.
+
 ## Bảo trì
 
 - [Sơ đồ thư mục và cách tạo bộ cài](docs/PROJECT_MAP.md).

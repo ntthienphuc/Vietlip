@@ -58,3 +58,11 @@ No new training or Vast rental is needed for these inference-only comparisons.
 Future training should add independently labeled camera recordings and a separate
 acceptance set; fitting the existing phone scripts would not demonstrate general
 recognition of unseen speech.
+
+Follow-up on November 10: a bounded image-orientation and candidate-expansion
+audit covered 209 frozen windows from eight recordings. Mirroring and equal-weight
+two-view scoring regressed one development scene. Original-image scoring of the
+expanded candidate union helped one new scene but regressed an older phone clip
+and the long recording, with no combined speech WER gain and additional compute.
+The application profile remains unchanged. See
+[`ORIENTATION_AUDIT_2026-11-10.md`](ORIENTATION_AUDIT_2026-11-10.md).
