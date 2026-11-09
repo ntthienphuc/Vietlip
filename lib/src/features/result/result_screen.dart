@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../models/transcription_result.dart';
 import '../../theme/app_theme.dart';
+import 'recording_export_card.dart';
 
 class ResultScreen extends StatelessWidget {
   const ResultScreen({required this.result, super.key});
@@ -192,6 +193,13 @@ class ResultScreen extends StatelessWidget {
               ),
             ),
           ),
+          if (result.diagnostics['video_path'] is String &&
+              (result.diagnostics['video_path'] as String).isNotEmpty) ...[
+            const SizedBox(height: 14),
+            RecordingExportCard(
+              path: result.diagnostics['video_path'] as String,
+            ),
+          ],
           if (result.consensusTranscript?.isNotEmpty == true &&
               result.consensusTranscript != result.transcript) ...[
             const SizedBox(height: 14),
