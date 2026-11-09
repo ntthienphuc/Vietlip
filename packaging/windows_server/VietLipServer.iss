@@ -8,12 +8,12 @@
 [Setup]
 AppId=VietLip.Server
 AppName=VietLip Server
-AppVersion=1.6.0
+AppVersion=1.6.3
 AppPublisher=VietLip
 DefaultDirName={localappdata}\Programs\VietLip Server
 DefaultGroupName=VietLip
 OutputDir={#OutputDir}
-OutputBaseFilename=VietLip-Server-Setup-1.6.0
+OutputBaseFilename=VietLip-Server-Setup-1.6.3
 SetupIconFile={#StageDir}\VietLip.ico
 UninstallDisplayIcon={app}\VietLip.ico
 PrivilegesRequired=lowest

@@ -9,7 +9,7 @@ import socket
 import urllib.request
 
 APP_NAME = "VietLip Server"
-APP_VERSION = "1.6.0"
+APP_VERSION = "1.6.3"
 ROOT = Path(__file__).resolve().parent
 
 

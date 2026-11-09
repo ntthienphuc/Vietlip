@@ -1,5 +1,9 @@
 # Frozen Wi-Fi caption comparison and physical Android stop receipt
 
+Follow-up: [conservative confirmation and fresh short-sentence phone test](VISUAL_CONFIRMATION_AND_SCENE04_2026-11-10.md).
+That follow-up resolves the tested short-fragment rejection by preserving unknown
+inputs. The detector remains opt-in and the release keeps SO17 unchanged.
+
 SO17 remains the live model. The two previously selected checkpoint averages
 regress on both newly retrieved speech recordings. A CNN confirmation gate
 removes false text in a controlled silence replay while preserving the speech

@@ -1,6 +1,6 @@
 # VietLip Windows installer
 
-Current target: 1.6.0, Windows x64, native SO17, CPU/CUDA, local Wi-Fi/LAN.
+Current target: 1.6.3, Windows x64, native SO17, CPU/CUDA, local Wi-Fi/LAN.
 Python and all runtime dependencies are included. The user does not need Python,
 CUDA Toolkit, Flutter, a cloud account or an API key. A compatible NVIDIA driver
 is needed to use CUDA; CPU remains the fallback.

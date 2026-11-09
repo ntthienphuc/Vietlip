@@ -39,6 +39,7 @@ def test_desktop_uses_bundled_files_and_ignores_experiment_environment(tmp_path,
     monkeypatch.setattr(runtime, "ROOT", tmp_path)
     monkeypatch.setattr(runtime.os, "environ", dict(runtime.os.environ))
     monkeypatch.setenv("LIP_EXPERIMENTAL_PHONEME_HEAD", "external.pt")
+    monkeypatch.setenv("LIP_EXPERIMENTAL_VISUAL_CONFIRMATION", "external.npz")
     monkeypatch.setenv("LIP_LLM_PROVIDER", "ollama")
     runtime.configure_runtime("cpu")
     settings = Settings.from_env()
@@ -46,6 +47,7 @@ def test_desktop_uses_bundled_files_and_ignores_experiment_environment(tmp_path,
     assert settings.device == "cpu"
     assert settings.llm_provider == "none"
     assert "LIP_EXPERIMENTAL_PHONEME_HEAD" not in runtime.os.environ
+    assert "LIP_EXPERIMENTAL_VISUAL_CONFIRMATION" not in runtime.os.environ
     assert settings.realtime_decode_interval_seconds == 1.5
 
 

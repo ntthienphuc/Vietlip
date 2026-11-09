@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 import json
 import logging
+import os
 import time
 from fastapi import WebSocketDisconnect
 from .live_evidence import LiveEvidence, check_live_images
@@ -17,6 +18,7 @@ from .caption_delivery import CaptionDelivery
 from .live_trace import LiveTrace
 from .video_preprocessor import VideoValidationError
 from .visual_activity import EndpointPolicy, Observation, VisualMotionDetector
+from .speech_confirmation import SpeechConfirmation
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +65,16 @@ class AutoStream:
         self.state, self.decoder_state = "waiting_for_face", "idle"
         self.activity_ms = 0.0
         self.first_frame_source = self.first_frame_wall = None
+        weights = os.environ.get("LIP_EXPERIMENTAL_VISUAL_CONFIRMATION", "").strip()
+        self.confirmation = (
+            SpeechConfirmation(weights, minimum_seconds=config.realtime_min_seconds)
+            if weights and self.kind == "raw_face" else None
+        )
+        self.confirm_executor = (
+            ThreadPoolExecutor(max_workers=1, thread_name_prefix="lip-confirmation")
+            if self.confirmation is not None else None
+        )
+        self.confirmation_status = {"enabled": self.confirmation is not None}
 
     async def send(self, payload):
         if self.disconnected:
@@ -99,6 +111,7 @@ class AutoStream:
             activity_samples=self.activity_samples,
             activity_timestamp=self.activity_time,
             activity_processing_ms=round(self.activity_ms, 2),
+            visual_confirmation=self.confirmation_status,
         )
 
     def finish_turn(self, end, reason):
@@ -281,6 +294,21 @@ class AutoStream:
                             max_width=360 if self.kind == "raw_face" else None,
                         )
                         await asyncio.to_thread(check_live_images, rgb, self.config.target_fps)
+                        if self.confirmation is not None:
+                            decision = await asyncio.get_running_loop().run_in_executor(
+                                self.confirm_executor, self.confirmation.evaluate,
+                                rgb, begin, end, turn.id, turn.start,
+                            )
+                            self.confirmation_status = {
+                                k: v for k, v in decision.items() if k != "events"
+                            }
+                            self.trace.record(dict(type="visual_confirmation", turn_id=turn.id,
+                                                   **decision))
+                            if not decision["allow_decode"]:
+                                raise VideoValidationError(
+                                    "visual_speech_unconfirmed",
+                                    "Chưa xác nhận được lời nói trong đoạn này.",
+                                )
                         result = await asyncio.to_thread(
                             self.engine.transcribe_frames,
                             rgb,
@@ -361,7 +389,9 @@ class AutoStream:
                 # An unfinished prefix can decode to blank. Keep its unavailable
                 # evidence, but do not tell a still-speaking user to repeat yet.
                 waiting_for_context = (
-                    not endpoint and getattr(exc, "code", None) == "empty_hypothesis"
+                    not endpoint and getattr(exc, "code", None) in {
+                        "empty_hypothesis", "visual_speech_unconfirmed"
+                    }
                 )
                 await self.send(
                     dict(
@@ -390,6 +420,11 @@ class AutoStream:
                 async with self.semaphore:
                     await asyncio.to_thread(self.engine.load)
             await loop.run_in_executor(self.executor, self.detector.load)
+            if self.confirmation is not None:
+                await loop.run_in_executor(self.confirm_executor, self.confirmation.load)
+                if self.confirmation.failure:
+                    logger.warning("Optional visual confirmation unavailable: %s",
+                                   self.confirmation.failure)
             await self.send(
                 dict(
                     type="ready",
@@ -402,6 +437,7 @@ class AutoStream:
                     silence_seconds=self.gate.silence_seconds,
                     mode="visual_activity_sliding_window",
                     stability_policy="local_agreement_2",
+                    experimental_visual_confirmation=self.confirmation is not None,
                 )
             )
             monitor, worker = (
@@ -481,6 +517,9 @@ class AutoStream:
                 await asyncio.gather(*tasks, return_exceptions=True)
             await loop.run_in_executor(self.executor, self.detector.close)
             self.executor.shutdown(wait=True)
+            if self.confirmation is not None:
+                await loop.run_in_executor(self.confirm_executor, self.confirmation.close)
+                self.confirm_executor.shutdown(wait=True)
             self.trace.close()
             logger.info(
                 "Auto live frames=%s turns=%s activity_ms=%.2f evidence=%s",

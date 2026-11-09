@@ -1,7 +1,7 @@
 # VietLip — sơ đồ project
 
 Mã ứng dụng đang bảo trì: `E:\Project\Lip_App\lip_reader`.
-Bộ cài mới: `C:\Users\thien\Downloads\VietLip-1.6.0`.
+Bộ cài hiện tại: `C:\Users\thien\Downloads\VietLip-1.6.3`.
 
 | Thư mục | Dùng để làm gì |
 | --- | --- |

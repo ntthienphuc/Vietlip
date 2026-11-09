@@ -1,5 +1,7 @@
 # VietLip visual activity: complete-recording check
 
+Latest: [implemented confirmation, CPU parity, and scene 4 on the phone](VISUAL_CONFIRMATION_AND_SCENE04_2026-11-10.md).
+
 Follow-up: [frozen complete-caption comparison and physical phone stop receipt](FROZEN_WIFI_CAPTIONS_2026-11-10.md).
 The new paired replay confirms suppression of seven inserted units, with
 unchanged speech captions, but also exposes a strict-confirmation failure on

@@ -34,7 +34,7 @@ class TranscriptionResponse(BaseModel):
 class HealthResponse(BaseModel):
     service: str = "lip-reader-api"
     app_name: str = "VietLip"
-    app_version: str = "1.6.0"
+    app_version: str = "1.6.3"
     api_version: str
     status: Literal["ok", "degraded"]
     model_state: str

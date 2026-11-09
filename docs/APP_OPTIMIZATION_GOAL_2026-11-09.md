@@ -1,5 +1,16 @@
 # Application optimization goal — updated by the user
 
+Current Wi-Fi iteration: see
+[`VISUAL_CONFIRMATION_AND_SCENE04_2026-11-10.md`](VISUAL_CONFIRMATION_AND_SCENE04_2026-11-10.md)
+for the four real scenes, frozen comparisons, conservative speech confirmation,
+and the fresh short-sentence session. SO17 remains selected; confirmation is
+opt-in. The release is synchronized to 1.6.3, including the verified
+Android export/version and final-caption receipt fixes. The earlier closing
+decision below refers to the November 9 checkpoint-selection iteration only.
+See `RELEASE_1_6_3_2026-11-10.md` for installed-package/LAN evidence. The overall
+optimization goal remains active: free-speech accuracy and broad live silence
+rejection have not been established at the user's desired level.
+
 The user expanded the active goal on 2026-11-09: optimize the application as far
 as practical, explore the parent Lip project and relevant work, use Vast if useful,
 and choose the best supported configuration when further trials stop producing
