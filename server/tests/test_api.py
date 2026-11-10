@@ -71,9 +71,7 @@ def test_local_agreement_only_commits_repeated_prefix():
 
 def test_continuous_transcript_stitches_overlapping_windows():
     transcript = ContinuousTranscript()
-    assert transcript.commit("xin chào tất cả mọi người") == (
-        "xin chào tất cả mọi người"
-    )
+    assert transcript.commit("xin chào tất cả mọi người") == ("xin chào tất cả mọi người")
     assert transcript.preview("mọi người hôm nay chúng ta học") == (
         "xin chào tất cả mọi người hôm nay chúng ta học"
     )
@@ -125,9 +123,7 @@ def test_realtime_websocket_finalizes_continuous_session():
     with TestClient(create_app(settings=settings, engine=MockEngine())) as client:
         with client.websocket_connect("/v1/realtime") as websocket:
             websocket.send_json({"type": "start"})
-            assert websocket.receive_json()["mode"] == (
-                "continuous_visual_captions"
-            )
+            assert websocket.receive_json()["mode"] == ("continuous_visual_captions")
             for _ in range(6):
                 websocket.send_bytes(encoded.tobytes())
 
@@ -238,9 +234,7 @@ def test_ollama_health_and_context_select_are_constrained_to_nbest():
             200,
             json={
                 "message": {
-                    "content": json.dumps(
-                        {"selected_index": 1, "reason": "đúng ngữ cảnh"}
-                    )
+                    "content": json.dumps({"selected_index": 1, "reason": "đúng ngữ cảnh"})
                 },
                 "total_duration": 12_000_000,
                 "load_duration": 3_000_000,
@@ -301,10 +295,7 @@ def test_ollama_assist_preserves_degenerate_repetition_without_calling_llm():
 
     assert result.assisted_transcript == repeated
     assert result.diagnostics["status"] == "ok"
-    assert (
-        result.diagnostics["constraint"]
-        == "preserve_visual_low_information"
-    )
+    assert result.diagnostics["constraint"] == "preserve_visual_low_information"
 
 
 def test_rejects_non_mp4_extension():
@@ -398,9 +389,7 @@ def test_async_job_returns_202_then_completed_result():
 
 
 def test_llm_mode_requires_explicit_risk_acceptance():
-    with TestClient(
-        create_app(engine=MockEngine(), llm=MockLlmPostprocessor())
-    ) as client:
+    with TestClient(create_app(engine=MockEngine(), llm=MockLlmPostprocessor())) as client:
         response = client.post(
             "/v1/transcriptions",
             files={"video": ("sample.mp4", fake_mp4(), "video/mp4")},
@@ -414,9 +403,7 @@ def test_llm_mode_requires_explicit_risk_acceptance():
 
 
 def test_llm_assist_preserves_visual_transcript_side_by_side():
-    with TestClient(
-        create_app(engine=MockEngine(), llm=MockLlmPostprocessor())
-    ) as client:
+    with TestClient(create_app(engine=MockEngine(), llm=MockLlmPostprocessor())) as client:
         response = client.post(
             "/v1/transcriptions",
             files={"video": ("sample.mp4", fake_mp4(), "video/mp4")},

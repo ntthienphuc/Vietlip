@@ -5,15 +5,15 @@ Windows trong cùng mạng nội bộ. Server hiển thị IP; người dùng nh
 **Cài đặt → Lưu và kiểm tra**. Phụ đề live chỉ dùng hình ảnh. Video lưu có âm
 thanh để đối chiếu khi thử nghiệm.
 
-**Bộ cài local:** `C:\Users\thien\Downloads\VietLip-1.6.3`.
-Mở `BAT_DAU.txt` trong thư mục đó để cài server và APK.
+**Bộ cài local:** `C:\Users\thien\Downloads\VietLip` — gồm đúng hai file:
+APK Android và ZIP Windows. Giải nén toàn bộ ZIP, rồi mở `BAT_DAU.txt`.
 
 ## Dùng bộ cài
 
 1. Chạy `02-Server-Windows/VietLip-Server-Setup-1.6.3.exe`; giữ các file `.bin`
    bên cạnh. Bộ cài có sẵn Python, thư viện CPU/CUDA và checkpoint SO17.
 2. Mở **VietLip Server** từ Start Menu và chờ **Sẵn sàng đọc môi**.
-3. Cài `01-Android/VietLip-1.6.3.apk` lên Android. Cập nhật trực tiếp để giữ
+3. Cài `VietLip-1.6.3.apk` đi kèm riêng lên Android. Cập nhật trực tiếp để giữ
    lịch sử trên thiết bị.
 4. PC và điện thoại kết nối cùng mạng Wi-Fi/LAN có cho phép liên lạc giữa
    thiết bị. Nhập IP server trong app, kiểm tra, rồi **Bắt đầu live**.
@@ -62,6 +62,7 @@ và bộ cài hiện tại. Đây là điểm chốt của đợt tối ưu vớ
 
 ## Bảo trì
 
+- [Kiểm tra code, gói hai file và quy tắc lưu trữ](docs/MAINTENANCE.md).
 - [Sơ đồ thư mục và cách tạo bộ cài](docs/PROJECT_MAP.md).
 - [Kiến trúc ứng dụng/server](docs/ARCHITECTURE.md).
 - [Bằng chứng bộ cài VietLip 1.6.0 trước đây](docs/RELEASE_1_6_0_2026-11-09.md).

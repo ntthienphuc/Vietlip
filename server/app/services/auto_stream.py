@@ -68,11 +68,13 @@ class AutoStream:
         weights = os.environ.get("LIP_EXPERIMENTAL_VISUAL_CONFIRMATION", "").strip()
         self.confirmation = (
             SpeechConfirmation(weights, minimum_seconds=config.realtime_min_seconds)
-            if weights and self.kind == "raw_face" else None
+            if weights and self.kind == "raw_face"
+            else None
         )
         self.confirm_executor = (
             ThreadPoolExecutor(max_workers=1, thread_name_prefix="lip-confirmation")
-            if self.confirmation is not None else None
+            if self.confirmation is not None
+            else None
         )
         self.confirmation_status = {"enabled": self.confirmation is not None}
 
@@ -296,14 +298,20 @@ class AutoStream:
                         await asyncio.to_thread(check_live_images, rgb, self.config.target_fps)
                         if self.confirmation is not None:
                             decision = await asyncio.get_running_loop().run_in_executor(
-                                self.confirm_executor, self.confirmation.evaluate,
-                                rgb, begin, end, turn.id, turn.start,
+                                self.confirm_executor,
+                                self.confirmation.evaluate,
+                                rgb,
+                                begin,
+                                end,
+                                turn.id,
+                                turn.start,
                             )
                             self.confirmation_status = {
                                 k: v for k, v in decision.items() if k != "events"
                             }
-                            self.trace.record(dict(type="visual_confirmation", turn_id=turn.id,
-                                                   **decision))
+                            self.trace.record(
+                                dict(type="visual_confirmation", turn_id=turn.id, **decision)
+                            )
                             if not decision["allow_decode"]:
                                 raise VideoValidationError(
                                     "visual_speech_unconfirmed",
@@ -388,11 +396,10 @@ class AutoStream:
                 )
                 # An unfinished prefix can decode to blank. Keep its unavailable
                 # evidence, but do not tell a still-speaking user to repeat yet.
-                waiting_for_context = (
-                    not endpoint and getattr(exc, "code", None) in {
-                        "empty_hypothesis", "visual_speech_unconfirmed"
-                    }
-                )
+                waiting_for_context = not endpoint and getattr(exc, "code", None) in {
+                    "empty_hypothesis",
+                    "visual_speech_unconfirmed",
+                }
                 await self.send(
                     dict(
                         type="telemetry" if waiting_for_context else "notice",
@@ -423,8 +430,9 @@ class AutoStream:
             if self.confirmation is not None:
                 await loop.run_in_executor(self.confirm_executor, self.confirmation.load)
                 if self.confirmation.failure:
-                    logger.warning("Optional visual confirmation unavailable: %s",
-                                   self.confirmation.failure)
+                    logger.warning(
+                        "Optional visual confirmation unavailable: %s", self.confirmation.failure
+                    )
             await self.send(
                 dict(
                     type="ready",

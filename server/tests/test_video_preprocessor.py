@@ -77,9 +77,7 @@ def test_track_face_rejects_when_too_few_frames_are_detected():
     with pytest.raises(VideoValidationError) as exc:
         preprocessor._track_face(
             frames,
-            detector_module=SimpleNamespace(
-                LandmarksDetector=SparseDetector
-            ),
+            detector_module=SimpleNamespace(LandmarksDetector=SparseDetector),
         )
 
     assert exc.value.code == "face_tracking_failed"
@@ -87,10 +85,7 @@ def test_track_face_rejects_when_too_few_frames_are_detected():
 
 
 def test_track_face_uses_facemesh_as_generic_close_face_rescue():
-    points = [
-        SimpleNamespace(x=0.5, y=0.5)
-        for _ in range(468)
-    ]
+    points = [SimpleNamespace(x=0.5, y=0.5) for _ in range(468)]
     points[33] = SimpleNamespace(x=0.35, y=0.40)
     points[133] = SimpleNamespace(x=0.42, y=0.40)
     points[362] = SimpleNamespace(x=0.58, y=0.40)
