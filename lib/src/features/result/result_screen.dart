@@ -35,6 +35,7 @@ class ResultScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Card(
+                color: AppColors.caption,
                 child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Column(
@@ -44,14 +45,17 @@ class ResultScreen extends StatelessWidget {
                         children: [
                           Icon(
                             Icons.closed_caption_outlined,
-                            color: AppColors.primary,
+                            color: AppColors.accent,
                             size: 22,
                           ),
                           SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               'Phụ đề',
-                              style: TextStyle(fontWeight: FontWeight.w700),
+                              style: TextStyle(
+                                color: AppColors.captionMuted,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ],
@@ -65,16 +69,24 @@ class ResultScreen extends StatelessWidget {
                           fontSize: 26,
                           height: 1.5,
                           fontWeight: FontWeight.w600,
+                          color: Colors.white,
                         ),
                       ),
                       const SizedBox(height: 20),
                       if (result.transcript.isEmpty)
                         const Text(
                           'Thử lại ở nơi đủ sáng, giữ miệng rõ trong khung hình và nói từng câu ngắn.',
-                          style: TextStyle(color: AppColors.muted, height: 1.5),
+                          style: TextStyle(
+                            color: AppColors.captionMuted,
+                            height: 1.5,
+                          ),
                         )
                       else
                         OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Color(0xFF627393)),
+                          ),
                           onPressed: () async {
                             await Clipboard.setData(
                               ClipboardData(text: result.transcript),

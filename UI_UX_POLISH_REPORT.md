@@ -1,125 +1,101 @@
-# VietLip 1.7.0 — UI/UX polish
+# VietLip 1.8.0 — UI/UX implementation and verification
 
-Completed on 15/11/2026 in `E:\Project\Lip_App\lip_reader`.
+Completed 15/11/2026 in `E:\Project\Lip_App\lip_reader`.
+Android 1.8.0+17; Windows companion remains compatible 1.7.0 / API 1.3.0.
 
 ## What changed
 
-- **A permanent caption destination on the main screen.** Preview and the
-  “Phụ đề trực tiếp” frame are visible together before starting. The empty frame
-  explains the next action. Live captions use the same component below the
-  preview; ending the session retains the received text. Compact screens and
-  enlarged text can scroll while the primary control stays reachable.
-- **Clear action hierarchy.** A large “Bắt đầu đọc môi” / “Kết thúc phiên” button,
-  compact video-import control, consistent help and a real server-readiness row.
-  Portrait fitting/rotation and image-aligned guide are preserved.
-- **One visual recognition flow.** Removed mode selection, context field,
-  LLM consent, assisted transcript presentation, LLM HTTP/provider factory and
-  launch scripts. The native decoder no longer loads/reorders with a phoneme
-  head. SO17 and the normal visual sliding-window/endpointing profile remain.
-  Legacy history metadata still round-trips without displaying assisted text.
-- **Settings with recovery.** Address validation beside the field, stale success
-  cleared on edit, bounded network check, disabled duplicate actions, truthful
-  preparing/error/ready states, direct return to capture. Tips/privacy details
-  are expandable rather than a long initial checklist.
-- **Transcript-first review.** Large readable text, specific copy feedback,
-  video export, technical details behind disclosure. Live duration is labeled
-  “Thời lượng phiên”, separately from batch processing time.
-- **History that can recover.** A failed read has a retry state; pull-to-refresh
-  awaits the load. Empty state gives a starting action. Clear-history confirmation
-  explains that video is retained; destructive semantics are unchanged.
-- **One visual system.** Teal, solid brand mark, actual shipped Nunito weights
-  400–700, consistent surfaces and spacing, darker warning text, 48+ touch
-  targets, readable status labels, scrollable details sheets. Reduced-motion
-  preference disables the automatic video-reveal scroll animation.
-- **Windows companion.** Larger address field, explicit readiness, secondary
-  logs collapsed by default, copy/refresh actions, resize-aware wrapping and
-  footer reservation. Three missed health polls replace stale readiness with
-  a recovery message. Upgrade removes the retired LLM modules/bytecode only
-  within the app's installation folder; new installer excludes bytecode caches.
+- Cobalt and deep blue replace the prior teal/card treatment. Be Vietnam Pro
+  provides the Vietnamese typography. Lip contour mark is shared by the header
+  and regenerated Android/web/Windows source icons; OFL license is bundled.
+- Camera occupies more of the ready screen and uniformly fills its frame.
+  Outer-edge cropping replaces black side bands. No rotation/transport change,
+  no unequal scaling and no change to the raw frames used for recognition.
+  Corner guides keep a portrait face shape. Help explains the visible crop.
+- The **Phụ đề trực tiếp** frame stays visible before capture. Large white
+  text on deep blue is clearly separated from preview and controls. During live,
+  the same panel shows committed/provisional text and a compact meaningful state.
+  Full transcript, copy and diagnostics remain available.
+- Main control remains pinned and video import is secondary. History adds the
+  real saved-session count and clearer rows. Result uses a readable transcript
+  surface with an explicit copy action. Settings adds a simple local-connection
+  diagram while retaining real address validation and readiness checks.
+- Discarding a selected video from an empty completed session returns to the
+  ready state. Nonempty captions remain available. Existing persistence and
+  delete/export semantics remain intact.
 
-## Components and contracts
+## Main files
 
-| Files | Responsibility |
+| Area | Files |
 | --- | --- |
-| `lib/src/features/capture/capture_screen.dart` | One supported flow, persistent controls and captions |
-| `capture_ready_layout.dart`, `live_capture_layout.dart` | Adaptive preview/caption layout before/during capture |
-| `live_caption_panel.dart`, `server_connection_banner.dart` | Idle/live states, real readiness, readable captions |
-| `lib/src/features/settings/settings_screen.dart` | Validation, connection/recovery, disclosure |
-| `lib/src/features/history/history_screen.dart` | Retry, refresh, clearer history presentation |
-| `lib/src/features/result/*` | Visual transcript, copy, export and correct timing labels |
-| `lib/src/theme/app_theme.dart`, `lib/src/widgets/*` | Shared typography, color, touch targets, notices |
-| `lib/src/data/lip_reader_api.dart` | Visual-only upload, five-second connection timeout, clearer errors |
-| `server/app/main.py`, `config.py`, `schemas.py`, `services/native_engine.py` | Remove LLM runtime and native phoneme rescoring |
-| `server/desktop_launcher.py`, `desktop_runtime.py` | Windows UI, readiness and isolated profile |
-| `packaging/windows_server/*`, `.env.example` | Rebuildable single-profile 1.7.0 installer and safe upgrade cleanup |
-| `test/*`, `server/tests/*`, Android QA helpers | Regression/contract/layout checks and real-device evidence |
+| Visual system | `lib/src/theme/app_theme.dart`, `widgets/app_brand.dart`, `widgets/app_shell.dart`, `widgets/connection_diagram.dart`, `assets/fonts/BeVietnamPro-*` |
+| Capture | `camera_viewport.dart`, `capture_camera_panel.dart`, `capture_ready_layout.dart`, `capture_screen.dart`, `live_caption_panel.dart`, `server_connection_banner.dart` |
+| Other journeys | `features/settings/settings_screen.dart`, `features/history/history_screen.dart`, `features/result/result_screen.dart` |
+| Brand assets | `tools/generate_brand_assets.py`, generated launcher/source icons |
+| Separate LLM experiment | `research/llm_rewrite_eval.py`, `docs/LLM_REWRITE_2026-11-15.md` |
 
-`/read`, `/history`, `/settings`, `/result`, upload/job/WS URLs and local history
-key remain. Protocol 2 is retained. API 1.3.0 deliberately accepts only
-`mode=visual_only`; retired assisted modes return an explicit 422 error.
-Reserved response/history metadata is retained for older data readers. Research
-records and prior model evaluations are historical evidence, not product modes.
+Recognition runtime remains SO17 visual-only. No LLM dependency, model selector
+or cloud key requirement was added to the installed application. The separate
+experiment sends raw text only, scores against hidden references, records API
+failures and stops new submissions after a quota response.
 
-## Verification actually performed
+## Verified checks
 
-| Check | Result/evidence |
+| Check | Actual result |
 | --- | --- |
-| Flutter analyze | No issues in final signed-build log |
-| Flutter tests | **34 passed**; includes legacy history, stale responses, input errors, retry, long content, 360/412/800 layouts and text scales through 2 |
-| Main caption placement | Extra layout check asserts the idle caption frame is above the primary control at normal text size; real phone screenshot confirms it |
-| Server tests | **98 passed, 9 skipped**; skips are optional offline vPhon research dependency, not active app inference |
-| Ruff | Check passed; 48 Python files already formatted |
-| Android signed release | Built; updated installed SM-G965F / Android 10 without clearing app data; existing history opened |
-| Wi-Fi capture | Two start/stop cycles on QA port 7103: 24–25 fps; application handshake logs 60–75 ms. The final installed-server cycle on port 7100 reached 25 fps and logged a 172 ms handshake |
-| Connection error/recovery | Real phone: closed port 7104 shows actionable error; restoring installed server at 7100 reports ready |
-| Copy/history | Real saved record opens; copy confirmation observed; original entries retained after APK updates |
-| Export | Android picker cancellation recovers; actual save to Downloads succeeded as `VietLip_UI_QA_20261115.mp4` (5,169,358 bytes); local readback decoded a frame and measured 306 frames at 30.05 fps |
-| Windows installer | Compile succeeded; silent upgrade exit 0; no restart needed |
-| Installed runtime | **11,922 payload files verified, zero failures**; SO17 ready on CUDA/float32; removed LLM modules and bytecode absent |
-| Two-file delivery | Every source hash checked; every ZIP entry read back and SHA-256 verified; receipt includes final APK/ZIP hashes |
+| Flutter analyze | No issues in accepted release log |
+| Flutter suite | **35 passed**, including 360/412/800 layouts, large text, long results, history, contracts and export regressions |
+| Preview transform | Added a meaningful regression check: cover scales both source axes equally; previous rotation/mirroring tests also pass |
+| Real Android update | Signed release installed over the existing app; old history still opens |
+| Actual Wi-Fi camera | About 101.4 s; 2520 emitted native frames, about 24.8 fps; mean JPEG encode 9.87 ms; 0 rejected stale timestamps; ready log 30 ms |
+| Actual phone captions | Prerecorded scene-4 visual input fed to real SO17; physical Android received and rendered **9/9** caption events, including the final text; 727/727 source-frame ACKs |
+| Navigation / copy | Home → settings → history → old result → copy feedback → new capture; working on physical phone |
+| Address / recovery | Old saved IP fails truthfully; current PC `192.168.1.9:7100` succeeds through local Wi-Fi; QA address is restored after replay |
+| Python research tooling | Ruff check/format pass; local controlled endpoint verifies normalization, reference isolation, quota circuit, raw fallback and request counts |
+| Four PC video replays | 134.56 s total, all source frames acknowledged; same inputs reused for each raw/LLM comparison |
 
-An early Python run exhausted Windows commit memory while two server processes
-and Android compilation were concurrent. The old audit server was closed and
-the complete server suite passed on retry. Final payload verification was run
-after the installer completed; intermediate checks during installation are not
-release evidence.
+The first connection-diagram layout overflowed at 2× text. It was fixed and
+the accepted 35-test release passed. Initial raw Flutter commands inherited a
+missing D: cache; the established build helper selected valid local caches.
+Neither intermediate failure is counted as successful verification.
 
-## Screenshots and receipts
+Server production source was not changed in this pass; the full 98-test server
+suite from 1.7.0 was **not rerun**. Current installed-server health and real
+SO17 inference were checked. New cloud tests are separate from the app runtime.
 
-Evidence is local and gitignored because history/camera images can be personal.
+## Evidence and limits
 
-- Before: `artifacts/ui_polish_20261115/before/`.
-- Final main screen: `after/HOME_FINAL.png` (caption visible before starting,
-  installed server on 7100); `after/capture-caption-verified.png` is the first
-  confirmed caption-frame screenshot.
-- Settings: `after/settings-final-state.png`, `settings-bad-result.png`,
-  `settings-recovery-check.png`.
-- Review/history: `after/result-final.png`, `history-final.png`.
-- Actual live UI/logs: `device-live/`, `device-final-live/`.
-- Checks: `android-caption-frame-release.log`, `server-test-final.log`,
-  `caption-layout-acceptance.log`, `installed-verify-final.log`,
-  `installed-health.json`, `install.log`, `delivery-receipt-final.json`, `ACCEPTANCE.json`
-  and `export-verification.json`.
+All UI evidence starts at `artifacts/ui_refresh_20261115/`:
 
-All relative evidence paths above start at `artifacts/ui_polish_20261115/`.
-Windows readiness/layout was inspected in the running native window using
-computer-use; no third-party design audit executables were installed or run.
+- `before/phone.png`: actual 1.7.0 baseline.
+- `after/home-final.png`, final delivery screenshot: camera/caption frame on ready screen.
+- `after/history.png`, `result.png`, `settings-connection.png`: actual journeys.
+- `after/live-with-captions.png`, `caption-replay-final.png`: physical display
+  with text from prerecorded visual input; not camera recognition of a live person.
+- `device-caption-replay/RESULTS.json`: all 9 captions have real Flutter receipts.
+- `device-log.txt`: actual unattended-camera transport.
+- `android-release-accepted.log`, `layout-final.log`: successful checks.
+- Delivery/installed APK hashes and final state are in `DELIVERY_VERIFIED.json`.
 
-## Delivery and limits
+Camera transport used an unattended phone pointed at the room. The bridge
+test substitutes prerecorded face frames and clearly tags history as
+**Kiểm thử phát lại**. These are transport/rendering checks; they do not measure
+new live-person WER or acoustic-end-to-display latency. No 2–3 second guarantee
+is inferred. No microphone audio was supplied to recognition or the LLM.
 
-`output/VietLip-1.7.0/` contains exactly:
+For LLM results, the complete eight-sentence comparison, partial 15-sentence
+quota-limited run, silence failure and extra latency are documented separately.
+The positive replay result is a development diagnostic, not a validated model
+upgrade. Raw transcripts and personal recordings stay outside Git/installers.
 
-1. `VietLip-1.7.0.apk`
-2. `VietLip-Windows-1.7.0.zip`
+## Delivery
 
-The ZIP contains the Windows installer, its two BIN payloads, instructions and
-checksums. Extract all files before running Setup. Android and Windows were
-updated locally for verification.
+`output/VietLip-1.8.0/` has two files:
 
-Live hardware checks used an unattended camera without a speaking face. They
-verify transport, layout and lifecycle; they do **not** establish a new WER/CER
-or speech-end-to-caption latency. SO17's known free-speech accuracy limits
-remain; 2–3 seconds is not guaranteed by this UI release. No iPhone build,
-TalkBack certification, full external-keyboard audit or blanket WCAG compliance
-is claimed. Broad improvements to model accuracy require separate paired
-video/reference evaluation.
+1. `VietLip-1.8.0.apk` — new mobile UI.
+2. `VietLip-Windows-1.7.0.zip` — the existing verified, compatible server.
+
+The Windows archive is byte-identical to the prior release; a local NTFS hard
+link avoids duplicating its 3.4 GB payload. The internal server/install guide
+still names the 1.7.0 release; use the new 1.8.0 APK beside it. An already
+installed 1.7.0 server needs no upgrade for this Android build.

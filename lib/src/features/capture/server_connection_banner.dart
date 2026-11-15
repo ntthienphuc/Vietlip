@@ -96,18 +96,19 @@ class _ServerConnectionBannerState extends State<ServerConnectionBanner> {
               widget.settings.apiUrl
         : 'Mở VietLip Server, rồi nhập IP trong Cài đặt';
     return Material(
-      color: Colors.transparent,
+      color: _ready ? AppColors.primarySoft : Colors.white,
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: widget.onConfigure,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 12),
           child: Row(
             children: [
               Icon(
                 _ready ? Icons.wifi_rounded : Icons.computer_outlined,
                 color: _ready ? AppColors.primary : AppColors.muted,
-                size: 22,
+                size: 19,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -117,15 +118,15 @@ class _ServerConnectionBannerState extends State<ServerConnectionBanner> {
                     Text(
                       title,
                       style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       detail,
                       style: const TextStyle(
-                        fontSize: 13,
+                        fontSize: 11,
                         color: AppColors.muted,
                       ),
                     ),

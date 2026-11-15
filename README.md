@@ -1,19 +1,20 @@
-# VietLip 1.7.0
+# VietLip 1.8.0
 
 Ứng dụng Android đọc môi tiếng Việt qua camera, kết nối không dây tới server
 Windows trong cùng mạng nội bộ. Server hiển thị IP; người dùng nhập IP trong
 **Cài đặt → Lưu và kiểm tra**. Phụ đề live chỉ dùng hình ảnh. Video lưu có âm
 thanh để đối chiếu khi thử nghiệm.
 
-**Bộ cài 1.7.0:** `E:\Project\Lip_App\lip_reader\output\VietLip-1.7.0` — gồm đúng hai file:
-APK Android và ZIP Windows. Giải nén toàn bộ ZIP, rồi mở `BAT_DAU.txt`.
+**Bộ cài hiện tại:** `E:\Project\Lip_App\lip_reader\output\VietLip-1.8.0` — gồm đúng hai file:
+APK Android 1.8.0 và ZIP Windows 1.7.0 tương thích. Server giữ phiên bản 1.7.0;
+đợt này thay giao diện Android và thử LLM riêng. Giải nén toàn bộ ZIP, rồi mở `BAT_DAU.txt`.
 
 ## Dùng bộ cài
 
 1. Chạy `02-Server-Windows/VietLip-Server-Setup-1.7.0.exe`; giữ các file `.bin`
    bên cạnh. Bộ cài có sẵn Python, thư viện CPU/CUDA và checkpoint SO17.
 2. Mở **VietLip Server** từ Start Menu và chờ **Sẵn sàng đọc môi**.
-3. Cài `VietLip-1.7.0.apk` đi kèm riêng lên Android. Cập nhật trực tiếp để giữ
+3. Cài `VietLip-1.8.0.apk` đi kèm riêng lên Android. Cập nhật trực tiếp để giữ
    lịch sử trên thiết bị.
 4. PC và điện thoại kết nối cùng mạng Wi-Fi/LAN có cho phép liên lạc giữa
    thiết bị. Nhập IP server trong app, kiểm tra, rồi **Bắt đầu đọc môi**.
@@ -65,6 +66,8 @@ và bộ cài hiện tại. Đây là điểm chốt của đợt tối ưu vớ
 ## Bảo trì
 
 - [Kiểm tra code, gói hai file và quy tắc lưu trữ](docs/MAINTENANCE.md).
+- [UI/UX 1.8.0 và kiểm chứng trên điện thoại](UI_UX_POLISH_REPORT.md).
+- [Thử sửa transcript bằng LLM lớn: kết quả và giới hạn](docs/LLM_REWRITE_2026-11-15.md).
 - [Sơ đồ thư mục và cách tạo bộ cài](docs/PROJECT_MAP.md).
 - [Kiến trúc ứng dụng/server](docs/ARCHITECTURE.md).
 - [Bằng chứng bộ cài VietLip 1.6.0 trước đây](docs/RELEASE_1_6_0_2026-11-09.md).

@@ -19,9 +19,9 @@ class CaptureCameraPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.circular(24),
+    borderRadius: BorderRadius.circular(26),
     child: ColoredBox(
-      color: const Color(0xFF111A1C),
+      color: AppColors.caption,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -43,15 +43,13 @@ class CaptureCameraPanel extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      Icons.circle,
-                      size: 7,
-                      color: recording
-                          ? const Color(0xFFFF8276)
-                          : AppColors.primarySoft,
+                      recording ? Icons.circle : Icons.face_retouching_natural,
+                      size: recording ? 7 : 15,
+                      color: recording ? const Color(0xFFFF8276) : Colors.white,
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      recording ? timerLabel : 'Giữ rõ khuôn mặt',
+                      recording ? timerLabel : 'Đặt môi trong khung',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 12,
@@ -89,21 +87,35 @@ class FaceGuidePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final width = size.width * .72;
-    final height = (width * 1.35).clamp(0.0, size.height * .72);
+    final width = (size.width * .65).clamp(0.0, size.height * .68 / 1.35);
+    final height = width * 1.35;
     final rect = Rect.fromCenter(
-      center: Offset(size.width / 2, size.height * .46),
+      center: Offset(size.width / 2, size.height * .51),
       width: width,
       height: height,
     );
-    final guide = RRect.fromRectAndRadius(rect, Radius.circular(width / 2));
-    canvas.drawRRect(
-      guide,
-      Paint()
-        ..color = Colors.white.withValues(alpha: .65)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
-    );
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: .85)
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 2;
+    const length = 25.0, radius = 18.0;
+    for (final corner in [
+      (rect.left, rect.top, 1.0, 1.0),
+      (rect.right, rect.top, -1.0, 1.0),
+      (rect.left, rect.bottom, 1.0, -1.0),
+      (rect.right, rect.bottom, -1.0, -1.0),
+    ]) {
+      final (x, y, dx, dy) = corner;
+      canvas.drawPath(
+        Path()
+          ..moveTo(x, y + dy * length)
+          ..lineTo(x, y + dy * radius)
+          ..quadraticBezierTo(x, y, x + dx * radius, y)
+          ..lineTo(x + dx * length, y),
+        paint,
+      );
+    }
   }
 
   @override

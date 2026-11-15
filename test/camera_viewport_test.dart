@@ -19,6 +19,36 @@ PreviewGeometry geometry(int width, int height, int rotation, bool mirror) =>
     });
 
 void main() {
+  testWidgets('filled preview crops edges with equal scale on both axes', (
+    tester,
+  ) async {
+    const marker = ValueKey('filled-preview');
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Center(
+          child: SizedBox(
+            width: 360,
+            height: 390,
+            child: CameraViewport(
+              sourceSize: Size(480, 720),
+              fit: BoxFit.cover,
+              overlay: SizedBox.shrink(),
+              child: ColoredBox(key: marker, color: Colors.green),
+            ),
+          ),
+        ),
+      ),
+    );
+    final box = tester.renderObject<RenderBox>(find.byKey(marker));
+    final matrix = box.getTransformTo(null);
+    final origin = MatrixUtils.transformPoint(matrix, Offset.zero);
+    final x = MatrixUtils.transformPoint(matrix, const Offset(100, 0));
+    final y = MatrixUtils.transformPoint(matrix, const Offset(0, 100));
+    expect((x - origin).distance, closeTo(75, .001));
+    expect((y - origin).distance, closeTo(75, .001));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('switching ready to live reuses the last native geometry', (
     tester,
   ) async {

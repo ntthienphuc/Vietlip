@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../theme/app_theme.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({required this.navigationShell, super.key});
@@ -31,29 +32,35 @@ class _AppShellState extends State<AppShell> {
       ),
       bottomNavigationBar: _capturing && navigationShell.currentIndex == 0
           ? null
-          : NavigationBar(
-              selectedIndex: navigationShell.currentIndex,
-              onDestinationSelected: (index) => navigationShell.goBranch(
-                index,
-                initialLocation: index == navigationShell.currentIndex,
+          : DecoratedBox(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(top: BorderSide(color: AppColors.border)),
               ),
-              destinations: const [
-                NavigationDestination(
-                  icon: Icon(Icons.center_focus_strong_outlined),
-                  selectedIcon: Icon(Icons.center_focus_strong),
-                  label: 'Đọc môi',
+              child: NavigationBar(
+                selectedIndex: navigationShell.currentIndex,
+                onDestinationSelected: (index) => navigationShell.goBranch(
+                  index,
+                  initialLocation: index == navigationShell.currentIndex,
                 ),
-                NavigationDestination(
-                  icon: Icon(Icons.history_outlined),
-                  selectedIcon: Icon(Icons.history),
-                  label: 'Lịch sử',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.tune_outlined),
-                  selectedIcon: Icon(Icons.tune),
-                  label: 'Cài đặt',
-                ),
-              ],
+                destinations: const [
+                  NavigationDestination(
+                    icon: Icon(Icons.center_focus_weak_rounded),
+                    selectedIcon: Icon(Icons.center_focus_strong_rounded),
+                    label: 'Đọc môi',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.history_outlined),
+                    selectedIcon: Icon(Icons.history),
+                    label: 'Lịch sử',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.tune_outlined),
+                    selectedIcon: Icon(Icons.tune),
+                    label: 'Cài đặt',
+                  ),
+                ],
+              ),
             ),
     );
   }

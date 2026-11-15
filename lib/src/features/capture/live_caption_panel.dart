@@ -57,20 +57,15 @@ class LiveCaptionPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = unavailable ? AppColors.error : AppColors.primary;
+    final accent = unavailable ? const Color(0xFFFFB8AD) : AppColors.accent;
     final fixed = committed.isEmpty && provisional.isEmpty
         ? transcript
         : committed;
     return Container(
-      padding: const EdgeInsets.fromLTRB(18, 6, 12, 14),
+      padding: const EdgeInsets.fromLTRB(20, 4, 14, 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.caption,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: unavailable
-              ? AppColors.error
-              : AppColors.primary.withValues(alpha: .2),
-        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,14 +76,18 @@ class LiveCaptionPanel extends StatelessWidget {
                 unavailable
                     ? Icons.info_outline
                     : Icons.closed_caption_outlined,
-                size: 20,
+                size: 18,
                 color: accent,
               ),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(
                   'Phụ đề trực tiếp',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
                 ),
               ),
               if (captureFps != null ||
@@ -97,34 +96,28 @@ class LiveCaptionPanel extends StatelessWidget {
                 IconButton(
                   tooltip: 'Thông tin phiên',
                   onPressed: () => _showDiagnostics(context),
-                  icon: const Icon(Icons.info_outline_rounded, size: 19),
+                  icon: const Icon(
+                    Icons.info_outline_rounded,
+                    size: 18,
+                    color: AppColors.captionMuted,
+                  ),
                 ),
               IconButton(
                 tooltip: 'Xem toàn bộ phụ đề',
                 onPressed: transcript.isEmpty
                     ? null
                     : () => _showTranscript(context),
-                icon: const Icon(Icons.open_in_full, size: 18),
+                icon: Icon(
+                  Icons.open_in_full,
+                  size: 17,
+                  color: transcript.isEmpty
+                      ? const Color(0xFF7383A2)
+                      : Colors.white,
+                ),
               ),
             ],
           ),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: .07),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              status,
-              style: TextStyle(
-                color: accent,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 2),
           Expanded(
             child: SingleChildScrollView(
               reverse: true,
@@ -136,7 +129,7 @@ class LiveCaptionPanel extends StatelessWidget {
                       TextSpan(
                         text: transcript.isEmpty
                             ? idle
-                                  ? 'Phụ đề sẽ hiện ở đây.\nBấm “Bắt đầu đọc môi”, rồi nói tự nhiên.'
+                                  ? 'Phụ đề sẽ\nhiện ở đây.'
                                   : unavailable
                                   ? 'Chưa đủ hình rõ để đọc môi.'
                                   : waitingForCaption
@@ -148,7 +141,7 @@ class LiveCaptionPanel extends StatelessWidget {
                         TextSpan(
                           text: '${fixed.isEmpty ? '' : ' '}$provisional',
                           style: const TextStyle(
-                            color: AppColors.primary,
+                            color: AppColors.accent,
                             decoration: TextDecoration.underline,
                             decorationStyle: TextDecorationStyle.dotted,
                           ),
@@ -156,27 +149,34 @@ class LiveCaptionPanel extends StatelessWidget {
                     ],
                   ),
                   style: TextStyle(
-                    fontSize: idle ? 18 : 24,
-                    height: 1.45,
-                    fontWeight: idle ? FontWeight.w500 : FontWeight.w600,
-                    color: unavailable ? AppColors.muted : AppColors.ink,
+                    fontSize: idle ? 25 : 24,
+                    height: 1.4,
+                    letterSpacing: -.6,
+                    fontWeight: FontWeight.w500,
+                    color: unavailable ? AppColors.captionMuted : Colors.white,
                   ),
                 ),
               ),
             ),
           ),
           const SizedBox(height: 10),
-          Text(
-            idle
-                ? 'Tự chốt câu khi bạn ngừng nói.'
-                : unavailable
-                ? transcript.isEmpty
-                      ? 'Phụ đề sẽ tiếp tục khi hình rõ trở lại.'
-                      : 'Phần đã nhận trước đó được giữ lại.'
-                : provisional.isNotEmpty
-                ? 'Chữ gạch dưới đang được cập nhật.'
-                : 'Phụ đề tự động · cần kiểm tra lại.',
-            style: const TextStyle(fontSize: 13, color: AppColors.muted),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 5),
+                child: Icon(Icons.circle, size: 6, color: accent),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  idle
+                      ? 'Bắt đầu phiên để chuyển khẩu hình thành chữ.'
+                      : status,
+                  style: TextStyle(fontSize: 11, height: 1.5, color: accent),
+                ),
+              ),
+            ],
           ),
         ],
       ),

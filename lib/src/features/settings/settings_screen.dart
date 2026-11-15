@@ -7,6 +7,7 @@ import '../../data/settings_controller.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_brand.dart';
 import '../../widgets/status_notice.dart';
+import '../../widgets/connection_diagram.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({required this.settings, super.key});
@@ -76,6 +77,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
               children: [
+                const ConnectionDiagram(),
+                const SizedBox(height: 26),
                 const Text(
                   'Kết nối máy tính',
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),

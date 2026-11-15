@@ -781,7 +781,7 @@ class _CaptureScreenState extends State<CaptureScreen>
             _buildCaptureControls(),
             const SizedBox(height: 10),
             const Text(
-              'Phụ đề chỉ dùng hình ảnh. Video lưu có tiếng để xem lại.',
+              'Đọc môi bằng hình ảnh · tự chốt khi ngừng nói',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,
@@ -887,7 +887,7 @@ class _CaptureScreenState extends State<CaptureScreen>
                 _buildCaptureControls(),
                 const SizedBox(height: 10),
                 const Text(
-                  'Phụ đề chỉ dùng hình ảnh. Video lưu có tiếng để xem lại.',
+                  'Đọc môi bằng hình ảnh · tự chốt khi ngừng nói',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 12,
@@ -991,6 +991,11 @@ class _CaptureScreenState extends State<CaptureScreen>
                 'Mỗi phiên tối đa 5 phút. Phụ đề tự động có thể sai; chữ gạch dưới còn có thể thay đổi.',
                 style: TextStyle(color: AppColors.muted, height: 1.5),
               ),
+              const SizedBox(height: 10),
+              const Text(
+                'Preview có thể cắt bớt mép ảnh để vừa khung, luôn giữ đúng tỷ lệ. Nhận dạng dùng khung hình gốc. Video lưu có âm thanh để xem lại; đọc môi chỉ dùng hình ảnh.',
+                style: TextStyle(color: AppColors.muted, height: 1.5),
+              ),
               const SizedBox(height: 20),
               FilledButton(
                 onPressed: () => Navigator.pop(context),
@@ -1019,6 +1024,7 @@ class _CaptureScreenState extends State<CaptureScreen>
                 controller!.value.previewSize!.height,
                 controller.value.previewSize!.width,
               ),
+              fit: BoxFit.cover,
               overlay: guide,
               child: CameraPreview(controller),
             );
@@ -1197,7 +1203,13 @@ class _CaptureScreenState extends State<CaptureScreen>
               tooltip: 'Bỏ video',
               onPressed: _submitting
                   ? null
-                  : () => setState(() => _video = null),
+                  : () => setState(() {
+                      _video = null;
+                      if (_liveTranscript.isEmpty) {
+                        _liveWasActive = false;
+                        _liveWarning = null;
+                      }
+                    }),
               icon: const Icon(Icons.close_rounded),
             ),
           ],

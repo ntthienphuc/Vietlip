@@ -2,17 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 abstract final class AppColors {
-  static const ink = Color(0xFF16343C);
-  static const muted = Color(0xFF546866);
-  static const canvas = Color(0xFFF4F7F6);
+  static const ink = Color(0xFF202C45);
+  static const muted = Color(0xFF626D82);
+  static const canvas = Color(0xFFF4F6FB);
   static const surface = Color(0xFFFFFFFF);
-  static const primary = Color(0xFF0C756E);
-  static const primarySoft = Color(0xFFE1F2EE);
-  static const accent = Color(0xFFFF8A5B);
+  static const primary = Color(0xFF3857D6);
+  static const primarySoft = Color(0xFFE8EDFF);
+  static const accent = Color(0xFF90DCCA);
+  static const caption = Color(0xFF1C2B49);
+  static const captionMuted = Color(0xFFBDCAE4);
+  static const success = Color(0xFF28745E);
   static const warning = Color(0xFF875C0A);
   static const warningSoft = Color(0xFFFFF3D6);
   static const error = Color(0xFFC2413B);
-  static const border = Color(0xFFE1E7E4);
+  static const border = Color(0xFFDFE5F0);
 }
 
 abstract final class AppTheme {
@@ -24,9 +27,9 @@ abstract final class AppTheme {
     );
     return ThemeData(
       useMaterial3: true,
-      fontFamily: 'Nunito',
+      fontFamily: 'BeVietnamPro',
       textTheme: ThemeData.light().textTheme.apply(
-        fontFamily: 'Nunito',
+        fontFamily: 'BeVietnamPro',
         bodyColor: AppColors.ink,
         displayColor: AppColors.ink,
       ),
@@ -49,8 +52,8 @@ abstract final class AppTheme {
         foregroundColor: AppColors.ink,
         elevation: 0,
         titleTextStyle: TextStyle(
-          fontFamily: 'Nunito',
-          fontSize: 24,
+          fontFamily: 'BeVietnamPro',
+          fontSize: 25,
           fontWeight: FontWeight.w700,
           color: AppColors.ink,
         ),
@@ -61,10 +64,7 @@ abstract final class AppTheme {
         margin: EdgeInsets.zero,
         color: AppColors.surface,
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: AppColors.border),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       ),
       inputDecorationTheme: InputDecorationTheme(
         contentPadding: const EdgeInsets.symmetric(
@@ -92,7 +92,12 @@ abstract final class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+          textStyle: const TextStyle(
+            fontFamily: 'BeVietnamPro',
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+            letterSpacing: -.2,
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -105,7 +110,7 @@ abstract final class AppTheme {
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        height: 70,
+        height: 66,
         backgroundColor: AppColors.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,

@@ -117,21 +117,53 @@ class _HistoryScreenState extends State<HistoryScreen> {
               onRefresh: _reload,
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-                itemCount: items.length,
+                itemCount: items.length + 1,
                 separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
-                  final item = items[index];
+                  if (index == 0) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 4, bottom: 18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${items.length} phiên đã lưu',
+                            style: const TextStyle(
+                              fontSize: 26,
+                              letterSpacing: -.7,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Xem lại những lời đã nói.',
+                            style: TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  final item = items[index - 1];
                   return Card(
                     child: ListTile(
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 8,
                       ),
-                      leading: const Padding(
-                        padding: EdgeInsets.only(top: 4),
-                        child: Icon(
+                      leading: Container(
+                        width: 44,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: AppColors.primarySoft,
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        child: const Icon(
                           Icons.closed_caption_outlined,
                           color: AppColors.primary,
+                          size: 22,
                         ),
                       ),
                       title: Text(
@@ -140,11 +172,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             : item.transcript,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                          height: 1.5,
+                        ),
                       ),
                       subtitle: Text(
                         '${item.modelId.startsWith('QA-prerecorded-') ? 'Kiểm thử phát lại · ' : ''}'
                         '${_formatDate(item.createdAt)}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.muted,
+                          height: 2.1,
+                        ),
                       ),
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => context.push('/result', extra: item),

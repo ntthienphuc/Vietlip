@@ -34,12 +34,12 @@ class CaptureReadyLayout extends StatelessWidget {
                 child: SizedBox(
                   height: height,
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                    padding: const EdgeInsets.fromLTRB(18, 8, 18, 4),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         header,
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 10),
                         connection,
                         if (notice != null) ...[
                           const SizedBox(height: 12),
@@ -62,7 +62,7 @@ class CaptureReadyLayout extends StatelessWidget {
                               }
                               final captionHeight = scale > 1.2
                                   ? 220 + (scale - 1) * 230
-                                  : (panel.maxHeight * .46).clamp(180.0, 220.0);
+                                  : (panel.maxHeight * .36).clamp(172.0, 195.0);
                               return Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
@@ -86,7 +86,7 @@ class CaptureReadyLayout extends StatelessWidget {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+          padding: const EdgeInsets.fromLTRB(18, 12, 18, 10),
           child: controls,
         ),
       ],

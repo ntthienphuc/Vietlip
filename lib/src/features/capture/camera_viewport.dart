@@ -56,33 +56,42 @@ class PreviewGeometry {
   }
 }
 
-/// Shows the whole upright image with uniform scale. The overlay shares the
-/// image coordinates, including when the viewport has letterboxing.
+/// Uniform scaling never distorts a face. Contain displays the whole image;
+/// cover fills the camera card and crops its outer edges. Recognition receives
+/// the original frames in both cases. Guides follow the visible viewport.
 class CameraViewport extends StatelessWidget {
   const CameraViewport({
     required this.sourceSize,
     required this.child,
     required this.overlay,
+    this.fit = BoxFit.contain,
     super.key,
   });
   final Size sourceSize;
   final Widget child;
   final Widget overlay;
+  final BoxFit fit;
 
   @override
   Widget build(BuildContext context) => ClipRect(
-    child: FittedBox(
-      fit: BoxFit.contain,
-      child: SizedBox.fromSize(
-        size: sourceSize,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            child,
-            IgnorePointer(child: overlay),
-          ],
+    child: Stack(
+      fit: StackFit.expand,
+      children: [
+        FittedBox(
+          fit: fit,
+          child: SizedBox.fromSize(
+            size: sourceSize,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                child,
+                if (fit == BoxFit.contain) IgnorePointer(child: overlay),
+              ],
+            ),
+          ),
         ),
-      ),
+        if (fit != BoxFit.contain) IgnorePointer(child: overlay),
+      ],
     ),
   );
 }
@@ -120,6 +129,7 @@ class NativeCameraPreview extends StatelessWidget {
       }
       return CameraViewport(
         sourceSize: geometry.uprightSize,
+        fit: BoxFit.cover,
         overlay: overlay,
         child: geometry.orient(Texture(textureId: textureId)),
       );

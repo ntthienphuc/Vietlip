@@ -1,58 +1,60 @@
-# VietLip — UI/UX audit, 15/11/2026
+# VietLip 1.8.0 — audit UI/UX, 15/11/2026
 
-## Product and flows
+## Product and observed baseline
 
-Flutter/Material 3 Android client, Vietnamese, Nunito, teal identity. CameraX
-captures portrait video; Python/FastAPI on a Windows PC reads visual speech over
-local Wi-Fi. Primary path: configure PC address → start camera session → read
-captions → finish → review/copy/export from local history. Existing `/read`,
-`/history`, `/settings`, `/result` routes and history schema must remain usable.
-Video import is another input to the same visual recognition engine.
+Android camera utility for Vietnamese visual speech, Flutter/Material 3.
+Camera → local Windows SO17 server over Wi-Fi → live captions → local history,
+copy and video export. Three tabs: Đọc môi, Lịch sử, Cài đặt. Preserve automatic
+endpointing, one visual recognition profile, portrait orientation, saved data
+and existing routes/API.
 
-Baseline: clean Git `177693f`, app 1.6.3, connected SM-G965F (Android 10).
-Observed capture, settings, history and a real saved result using ADB screenshots
-and accessibility dumps. Baselines: `artifacts/ui_polish_20261115/before/`.
-Source alone was not used to judge the rendered UI.
+User rejected the 1.7.0 appearance as dull. The actual baseline was inspected
+on connected Samsung SM-G965F / Android 10, not inferred only from code.
+Screenshot: `artifacts/ui_refresh_20261115/before/phone.png`. Version 1.7.0
+audit/report preserved under that same `before/` folder and in Git history.
 
-## Priorities and evidence
+## Findings and priorities
 
-| Priority | Screen/evidence | User impact | Correction |
+| Priority | Evidence | Effect | Applied direction |
 | --- | --- | --- | --- |
-| P1 | Main screen has no caption destination before live; user explicitly requested a permanent frame | Users cannot predict where words will appear | Keep preview and caption frame visible together from launch; explicit idle prompt |
-| P1 | Capture has no visible connection status; stale saved IP only appears in settings | Users start without knowing whether PC is reachable | Show real, refreshable server state with a direct settings action |
-| P1 | Capture source contains 3 processing modes, context form and LLM consent; result has LLM and N-best sections | Multiple competing explanations for one task; conflicts with requested visual-only product | Remove LLM UI and runtime; one supported visual mode; retain legacy history fields solely for readback |
-| P1 | Start/import buttons share the row equally; controls are within scrolling content | Core action can leave the viewport; import competes with live use | Persistent full-size primary control plus a compact, named import action |
-| P1 | Settings reports success until the next explicit check, even after editing the address | A ready state can describe a different address | Clear stale results on edit, validate next to field, disable duplicate checks, add return-to-capture action |
-| P1 | History FutureBuilder has loading and success only | Read failure looks like endless loading | Explicit retry state; await refresh; preserve delete semantics |
-| P2 | Result leads with warning, large technical chips, mode/model/request identifiers | Transcript is harder to scan; live duration is presented as processing time | Transcript first, concise review note, technical disclosure with correct duration labels |
-| P2 | Many 800 font weights (font assets end at 700), card borders and repeated icon tiles | Weak visual hierarchy and excess density | Role-based 400/500/600/700 typography, restrained surfaces, consistent spacing/radii |
-| P2 | Some copy mixes “live”, “server”, “full-clip”, “N-best” | Adds technical knowledge to routine tasks | Use “đọc môi”, “máy chủ”, “phụ đề”, “đọc video”; reserve internal details for disclosure |
-| P2 | Live layout includes stop inside scroll; diagnostics sheets do not all handle enlarged text | Ending a session or reading details needs extra scrolling | Pin session control; scroll content/sheets; test 360–800 widths and text scale up to 2 |
+| P1 | Actual home screenshot: full-width camera card contains a narrow portrait image and large black bands | Small apparent face; much of the main surface is unused | Fill card with uniform scaling; trim outer edges and keep original inference frames |
+| P1 | User explicitly wants a clear main transcript frame; white preview surround and white caption panel have weak separation | Caption destination lacks emphasis | Permanent deep blue caption surface, large white type, mint state cue |
+| P1 | Large status strip, repeated helper text, nested white cards share similar weight | Many elements compete with camera/text | Compact real readiness row; single line state inside captions; primary action stays pinned |
+| P2 | Prior mark is a generic subtitle icon, Nunito/teal treatment feels generic to this product | Weak visual identity | Lip contour mark, cobalt, Vietnamese Be Vietnam Pro typography |
+| P2 | History is a repeated list with no overview; result surface resembles other cards | Scanning hierarchy is weak | Saved-session count, restrained rows, transcript-first dark review surface |
+| P2 | Settings explains PC connection only in prose | Users must infer which two devices connect | Static phone–Wi-Fi–PC diagram plus real status below the actual check |
+| P2 | Empty completed session remains in a warning state after removing its selected video | Idle screen looks like an ongoing failure | Reset empty-session state when discarding the selection; retain nonempty captions |
+| P1 during verification | Connection diagram initially overflowed at 360 px / 2× text | Enlarged text makes the page fail | Flexible device labels with wrapping; rerun small-screen checks |
 
 ## Design direction
 
-Calm camera utility: large undistorted portrait image, independent readable
-caption surface, one primary action per state. Preserve teal identity, Nunito,
-Material feedback, three-tab navigation, automatic visual endpointing and local
-history/export. Use 4/8/12/16/24 spacing; 16/20/24 radii by component role;
-dark ink, AA-targeted muted text, semantic warning/error colors. Touch targets
-at least 48 logical pixels. No decorative animation; honor disabled animations.
-State is conveyed with text and icon, never color alone. No accuracy or latency
-claims are implied by visual polish.
+A camera and caption tool with an identifiable, quiet visual system.
+Cobalt `#3857D6` for actions; dark ink `#202C45`; canvas `#F4F6FB`;
+caption surface `#1C2B49`; mint `#90DCCA` for readable caption state.
+One bundled font family for current UI: Be Vietnam Pro, weights 400–700,
+with its OFL license. Large actual caption text; compact labels and secondary
+metadata. Radii follow roles: 14–16 for small controls, 22–26 for main surfaces.
 
-## Reference reading
+Camera cover uses equal scale on both axes. It crops edges, never squeezes a
+face; recognition still uses the original frames. The face guide keeps portrait
+proportions in the visible card. No decorative animation or network font load.
 
-Reviewed applicable source guidance, without installing or running third-party
-skills/tools: [Impeccable](https://github.com/pbakaus/impeccable) (critique/audit,
-polish/clarify/harden/onboard/adapt/distill/typeset/layout/animate/delight),
-[Vercel agent guidelines](https://github.com/vercel-labs/agent-skills/tree/main/skills/web-design-guidelines),
-[Web Interface Guidelines](https://github.com/vercel-labs/web-interface-guidelines),
-[Anthropic frontend design](https://github.com/anthropics/skills/blob/main/skills/frontend-design/SKILL.md),
-[UI UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill),
-[UX writing](https://github.com/plugin87/ux-ui-agent-skills/blob/main/.claude/skills/ux-writing/SKILL.md),
-[evidence-based critique](https://github.com/luisoos/ui-skills/blob/main/skills/design-critique/SKILL.md).
-Applied principles: hierarchy from the actual task, remove redundant choices,
-specific action labels, error recovery, progressive disclosure, real device
-inspection, text scaling and touch targets. Web/React-only advice is not treated
-as an Android requirement. This is a product audit, not an execution of those
-skills' automated audits or a claim of full WCAG compliance.
+Keep the permanent caption frame, Vietnamese action labels, refreshable real
+server state, stable-caption policy, local history/export and 48 px touch targets.
+Do not imply improved recognition through styling. LLM is evaluated in a separate
+research runner; app/server runtime still has one visual-only mechanism.
+
+## Interaction/accessibility checks
+
+Inspect actual home, live, history, result, settings, error/recovery and copy
+feedback on the phone. Exercise long content, narrow phone/tablet widths and
+text scale through 2 with existing widget tests. Keep scroll fallback with
+controls reachable. Status uses wording/icons as well as color. New layout
+introduces no motion; existing reduced-motion behavior remains applicable.
+
+The prior pass read the user-specified Impeccable, Vercel, Anthropic frontend
+design, UI UX Pro Max, UX writing and evidence-based critique references.
+This pass also reread the Anthropic design guidance and obtained the font from
+the official Google Fonts source. No third-party design skills were installed.
+These references support decisions; they are not automated audit results.
+No full WCAG/TalkBack certification is claimed.
