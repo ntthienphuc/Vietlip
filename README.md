@@ -68,6 +68,7 @@ và bộ cài hiện tại. Đây là điểm chốt của đợt tối ưu vớ
 - [Kiểm tra code, gói hai file và quy tắc lưu trữ](docs/MAINTENANCE.md).
 - [UI/UX 1.8.0 và kiểm chứng trên điện thoại](UI_UX_POLISH_REPORT.md).
 - [Thử sửa transcript bằng LLM lớn: kết quả và giới hạn](docs/LLM_REWRITE_2026-11-15.md).
+- [Kiểm dữ liệu local, ba mô hình thị giác và phép thử LLM mở rộng](docs/LLM_EXPANSION_2026-11-15.md).
 - [Sơ đồ thư mục và cách tạo bộ cài](docs/PROJECT_MAP.md).
 - [Kiến trúc ứng dụng/server](docs/ARCHITECTURE.md).
 - [Bằng chứng bộ cài VietLip 1.6.0 trước đây](docs/RELEASE_1_6_0_2026-11-09.md).

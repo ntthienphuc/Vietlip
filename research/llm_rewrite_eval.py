@@ -1,7 +1,8 @@
 """Paired, text-only rewrite experiment. Never imported by the app/server.
 
 Each input record has id, scene, raw; the separate references file has scene ->
-speaker-confirmed text. References are read only by the scoring stage. No video,
+reference text with provenance recorded by the experiment. References are read
+only by the scoring stage. No video,
 audio, scenario names or reference sentences are sent to the provider.
 """
 
@@ -9,6 +10,7 @@ import argparse
 import concurrent.futures
 import hashlib
 import json
+import os
 import re
 import statistics
 import time
@@ -67,7 +69,16 @@ def score(ref, hyp):
     }
 
 
-def request_one(endpoint, model, strategy, record, timeout, max_tokens=700):
+def request_one(
+    endpoint,
+    model,
+    strategy,
+    record,
+    timeout,
+    max_tokens=700,
+    api_key=None,
+    reasoning_effort=None,
+):
     payload = {
         "model": model,
         "temperature": 0,
@@ -81,15 +92,17 @@ def request_one(endpoint, model, strategy, record, timeout, max_tokens=700):
         ],
     }
     payload["reasoning"] = {"effort": "low" if model.startswith("baidu/") else "none"}
+    if reasoning_effort is not None:
+        payload.pop("reasoning")
+        payload["reasoning_effort"] = reasoning_effort
     body = json.dumps(payload, ensure_ascii=False).encode()
-    req = urllib.request.Request(
-        endpoint,
-        data=body,
-        headers={
-            "Content-Type": "application/json",
-            "User-Agent": "VietLip-Evaluation/1.0",
-        },
-    )
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "VietLip-Evaluation/1.0",
+    }
+    if api_key:
+        headers["Authorization"] = "Bearer " + api_key
+    req = urllib.request.Request(endpoint, data=body, headers=headers)
     start = time.perf_counter()
     status, response, error = 0, {}, None
     try:
@@ -219,7 +232,17 @@ def main():
     p.add_argument("--timeout", type=float, default=30)
     p.add_argument("--max-tokens", type=int, default=700)
     p.add_argument("--turn-references", type=Path)
+    p.add_argument(
+        "--api-key-env",
+        help="Name of a dedicated provider key variable; value is never logged",
+    )
+    p.add_argument(
+        "--reasoning-effort", choices=["none", "minimal", "low", "medium", "high"]
+    )
     args = p.parse_args()
+    api_key = os.getenv(args.api_key_env) if args.api_key_env else None
+    if args.api_key_env and not api_key:
+        p.error("Requested provider key variable is not set")
     args.output.mkdir(parents=True, exist_ok=False)
     records = json.loads(args.inputs.read_text(encoding="utf-8"))
     (args.output / "inputs.json").write_bytes(args.inputs.read_bytes())
@@ -232,7 +255,14 @@ def main():
     tasks = [(m, s, r) for m in args.models for s in args.strategies for r in records]
 
     def run(t):
-        return request_one(args.endpoint, *t, args.timeout, args.max_tokens)
+        return request_one(
+            args.endpoint,
+            *t,
+            args.timeout,
+            args.max_tokens,
+            api_key,
+            args.reasoning_effort,
+        )
 
     # One call at a time; stop submitting when a provider applies a quota.
     quota_reached = False
