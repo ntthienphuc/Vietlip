@@ -1,20 +1,24 @@
-# VietLip 1.8.0
+# VietLip 1.9.0
 
 Ứng dụng Android đọc môi tiếng Việt qua camera, kết nối không dây tới server
 Windows trong cùng mạng nội bộ. Server hiển thị IP; người dùng nhập IP trong
 **Cài đặt → Lưu và kiểm tra**. Phụ đề live chỉ dùng hình ảnh. Video lưu có âm
 thanh để đối chiếu khi thử nghiệm.
 
-**Bộ cài hiện tại:** `E:\Project\Lip_App\lip_reader\output\VietLip-1.8.0` — gồm đúng hai file:
-APK Android 1.8.0 và ZIP Windows 1.7.0 tương thích. Server giữ phiên bản 1.7.0;
-đợt này thay giao diện Android và thử LLM riêng. Giải nén toàn bộ ZIP, rồi mở `BAT_DAU.txt`.
+**Bộ cài hiện tại:** `output/VietLip-1.9.0` — gồm đúng hai file:
+APK Android 1.9.0 và ZIP Windows 1.9.0. Giải nén toàn bộ ZIP, rồi mở `BAT_DAU.txt`.
+
+Mặc định **Trực tiếp — SO17** để ưu tiên live. Trong Cài đặt có thêm các phương pháp
+AI sửa thận trọng/khôi phục câu sau phiên. Bản AI nằm riêng trong Lịch sử; phụ đề
+gốc vẫn được lưu và hiển thị. Phương pháp AI cần cấu hình endpoint trên PC.
+Xem [cách dùng và cấu hình](docs/READING_METHODS_1_9.md).
 
 ## Dùng bộ cài
 
-1. Chạy `02-Server-Windows/VietLip-Server-Setup-1.7.0.exe`; giữ các file `.bin`
+1. Chạy `02-Server-Windows/VietLip-Server-Setup-1.9.0.exe`; giữ các file `.bin`
    bên cạnh. Bộ cài có sẵn Python, thư viện CPU/CUDA và checkpoint SO17.
 2. Mở **VietLip Server** từ Start Menu và chờ **Sẵn sàng đọc môi**.
-3. Cài `VietLip-1.8.0.apk` đi kèm riêng lên Android. Cập nhật trực tiếp để giữ
+3. Cài `VietLip-1.9.0.apk` đi kèm riêng lên Android. Cập nhật trực tiếp để giữ
    lịch sử trên thiết bị.
 4. PC và điện thoại kết nối cùng mạng Wi-Fi/LAN có cho phép liên lạc giữa
    thiết bị. Nhập IP server trong app, kiểm tra, rồi **Bắt đầu đọc môi**.
@@ -44,7 +48,8 @@ hay LLM/API key. Xem hướng dẫn trong
 ## Mô hình và giới hạn
 
 Giữ **SO17 native, float32, beam 3 / CTC 0.1, 25 fps, cửa sổ 6 giây và bước
-1,5 giây**. Runtime chỉ dùng SO17; đã gỡ LLM và nhánh chấm lại bằng âm vị. Các tài liệu thử nghiệm cũ được giữ để đối chiếu.
+1,5 giây**. Nhận dạng live dùng SO17; AI tùy chọn chỉ xem lại văn bản sau phiên.
+Các tài liệu thử nghiệm cũ được giữ để đối chiếu.
 
 Ứng dụng vẫn là bản thử nghiệm, **chưa đạt độ chính xác cao với câu nói tự do**.
 Phiên Wi-Fi bốn câu ngắn mới nhất có WER 66,67% và CER 50,00%; đây là lỗi chữ
@@ -89,6 +94,6 @@ thử nghiệm cũ được giữ để đối chiếu; chúng không nằm tron
 ## UI/UX 1.7.0
 
 Xem [audit](UI_UX_AUDIT.md) và [báo cáo thay đổi, kiểm thử](UI_UX_POLISH_REPORT.md).
-Gỡ lựa chọn chế độ/ngữ cảnh/LLM; giữ một luồng nhận dạng hình ảnh. Lịch sử cũ
+Ở bản 1.7 đã gỡ lựa chọn chế độ/ngữ cảnh/LLM; giữ một luồng nhận dạng hình ảnh. Lịch sử cũ
 vẫn đọc được và hiển thị phụ đề thị giác gốc. Các endpoint upload/jobs/WebSocket
 giữ đường dẫn; API 1.3.0 chỉ nhận `mode=visual_only`.

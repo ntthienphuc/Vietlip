@@ -3,11 +3,38 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../models/transcription_result.dart';
+import '../../data/history_repository.dart';
 import '../../theme/app_theme.dart';
 import 'recording_export_card.dart';
+import 'transcript_rewrite_card.dart';
 
 class ResultScreen extends StatelessWidget {
-  const ResultScreen({required this.result, super.key});
+  const ResultScreen({required this.result, this.history, super.key});
+  final TranscriptionResult result;
+  final HistoryRepository? history;
+
+  @override
+  Widget build(BuildContext context) {
+    final repository = history;
+    if (repository == null) return _ResultContent(result: result);
+    return ListenableBuilder(
+      listenable: repository,
+      builder: (context, _) => FutureBuilder<List<TranscriptionResult>>(
+        future: repository.list(),
+        builder: (context, snapshot) {
+          final matches = (snapshot.data ?? const <TranscriptionResult>[])
+              .where((item) => item.requestId == result.requestId);
+          return _ResultContent(
+            result: matches.isEmpty ? result : matches.first,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ResultContent extends StatelessWidget {
+  const _ResultContent({required this.result});
   final TranscriptionResult result;
 
   @override
@@ -51,7 +78,7 @@ class ResultScreen extends StatelessWidget {
                           SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'Phụ đề',
+                              'Phụ đề gốc',
                               style: TextStyle(
                                 color: AppColors.captionMuted,
                                 fontWeight: FontWeight.w600,
@@ -107,6 +134,10 @@ class ResultScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 14),
+              if (result.rewrite != null) ...[
+                TranscriptRewriteCard(review: result.rewrite!),
+                const SizedBox(height: 14),
+              ],
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

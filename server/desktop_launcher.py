@@ -122,7 +122,7 @@ class ServerWindow:
         footer = ttk.Frame(panel)
         footer.pack(side="bottom", fill="x", pady=(20, 0))
         ttk.Label(
-            footer, text="Chỉ dùng hình ảnh\nPhụ đề tự động cần kiểm tra", style="Muted.TLabel"
+            footer, text="Đọc môi bằng hình ảnh\nAI sau phiên là tùy chọn", style="Muted.TLabel"
         ).pack(side="left")
         ttk.Button(footer, text="Đóng máy chủ", command=self.close).pack(side="right")
         self.footer = footer

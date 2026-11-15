@@ -11,6 +11,8 @@ import '../../data/frame_encoder_service.dart';
 import '../../data/capture_cadence.dart';
 import '../../data/capture_storage.dart';
 import '../../models/transcription_result.dart';
+import '../../models/reading_method.dart';
+import '../../data/transcript_review.dart';
 import '../../data/history_repository.dart';
 import '../../data/live_lip_session.dart';
 import '../../data/lip_reader_api.dart';
@@ -83,6 +85,9 @@ class _CaptureScreenState extends State<CaptureScreen>
   double? _liveFps;
   int? _liveElapsedMs;
   Map<String, dynamic> _liveEvidence = const {};
+  TranscriptionResult? _lastLiveResult;
+  ReadingMethod _sessionMethod = ReadingMethod.visual;
+  String _sessionServerAddress = '';
 
   bool get _isRecording => _camera?.value.isRecordingVideo == true;
   bool get _showLiveSession =>
@@ -365,6 +370,9 @@ class _CaptureScreenState extends State<CaptureScreen>
       );
     }
     await _closeLiveSession();
+    _sessionMethod = widget.settings.readingMethod;
+    _sessionServerAddress = widget.settings.apiUrl;
+    _lastLiveResult = null;
     if (mounted) setState(() => _liveStatus = 'Đang kết nối phụ đề…');
     final connectClock = Stopwatch()..start();
     try {
@@ -591,8 +599,12 @@ class _CaptureScreenState extends State<CaptureScreen>
           ? finalTranscript!.trim()
           : _liveTranscript.trim();
       if (savedTranscript.isNotEmpty) {
-        await widget.history.add(
-          TranscriptionResult(
+        _lastLiveResult = await saveWithReview(
+          settings: widget.settings,
+          history: widget.history,
+          method: _sessionMethod,
+          serverAddress: _sessionServerAddress,
+          result: TranscriptionResult(
             requestId: 'live-${DateTime.now().microsecondsSinceEpoch}',
             transcript: savedTranscript,
             status: 'review_required',
@@ -675,7 +687,9 @@ class _CaptureScreenState extends State<CaptureScreen>
       _error = null;
     });
     try {
-      final result = await LipReaderApi(widget.settings).transcribe(
+      final method = widget.settings.readingMethod;
+      final address = widget.settings.apiUrl;
+      final result = await LipReaderApi.atAddress(address).transcribe(
         videoPath: video.path,
         onProgress: (progress) {
           if (mounted) setState(() => _uploadProgress = progress);
@@ -684,9 +698,15 @@ class _CaptureScreenState extends State<CaptureScreen>
           if (mounted) setState(() => _processingStatus = status);
         },
       );
-      await widget.history.add(result);
+      final saved = await saveWithReview(
+        result: result,
+        settings: widget.settings,
+        history: widget.history,
+        method: method,
+        serverAddress: address,
+      );
       if (!mounted) return;
-      await context.push('/result', extra: result);
+      await context.push('/result', extra: saved);
     } catch (error) {
       if (mounted) {
         setState(() => _error = LipReaderApi.readableError(error));
@@ -849,6 +869,15 @@ class _CaptureScreenState extends State<CaptureScreen>
                       _buildLiveDraft(idle: !_liveWasActive),
                       if (_video != null) ...[
                         const SizedBox(height: 20),
+                        if (_lastLiveResult != null) ...[
+                          OutlinedButton.icon(
+                            onPressed: () =>
+                                context.push('/result', extra: _lastLiveResult),
+                            icon: const Icon(Icons.article_outlined),
+                            label: const Text('Xem bản đã lưu'),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                         _buildSelectedVideo(),
                         const SizedBox(height: 12),
                         if (_canRunFullClip)

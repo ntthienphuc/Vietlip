@@ -1,6 +1,6 @@
 # VietLip Windows installer
 
-Current target: 1.7.0, Windows x64, native SO17, CPU/CUDA, local Wi-Fi/LAN.
+Current target: 1.9.0, Windows x64, native SO17, CPU/CUDA, local Wi-Fi/LAN.
 Python and all runtime dependencies are included. The user does not need Python,
 CUDA Toolkit, Flutter, a cloud account or an API key. A compatible NVIDIA driver
 is needed to use CUDA; CPU remains the fallback.
@@ -25,6 +25,11 @@ it is not shipped or used by the VietLip user workflow. Distribution uses LAN IP
 entry. See `README_INSTALL.txt` for the guide included in the installer.
 
 The old 1.1.0 scripts are archived under `packaging/legacy_windows_server_1_1`.
+
+The default remains SO17 visual recognition. Optional post-session AI review
+uses a PC-owned configuration outside the installation directory and preserves
+the original caption. See [method settings](../../docs/READING_METHODS_1_9.md).
+No provider key, gateway address or LLM weight is shipped in the installer.
 
 After removing the developer virtual environment, the preserved installed Python
 3.11 runtime can stage an update without downloading the model again:

@@ -43,6 +43,7 @@ from .services.realtime import (
     decode_jpeg_frames,
 )
 from .services.video_preprocessor import VideoValidationError
+from .services.transcript_rewrite import TranscriptRewriter, rewrite_router
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +106,7 @@ def create_app(
         allow_methods=["GET", "POST"],
         allow_headers=["*"],
     )
+    app.include_router(rewrite_router(TranscriptRewriter()))
 
     @app.exception_handler(VideoValidationError)
     async def video_error_handler(

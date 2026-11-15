@@ -1,3 +1,5 @@
+import 'transcript_rewrite.dart';
+
 class AlternativeTranscript {
   const AlternativeTranscript({required this.text, this.rawScore});
 
@@ -29,6 +31,7 @@ class TranscriptionResult {
     this.assistedTranscript,
     this.consensusTranscript,
     this.riskNotice,
+    this.rewrite,
   });
 
   final String requestId;
@@ -46,6 +49,10 @@ class TranscriptionResult {
   final String? assistedTranscript;
   final String? consensusTranscript;
   final String? riskNotice;
+  final TranscriptRewrite? rewrite;
+
+  TranscriptionResult withRewrite(TranscriptRewrite value) =>
+      TranscriptionResult.fromJson({...toJson(), 'rewrite': value.toJson()});
 
   factory TranscriptionResult.fromJson(Map<String, dynamic> json) {
     return TranscriptionResult(
@@ -72,6 +79,11 @@ class TranscriptionResult {
       assistedTranscript: json['assisted_transcript']?.toString(),
       consensusTranscript: json['consensus_transcript']?.toString(),
       riskNotice: json['risk_notice']?.toString(),
+      rewrite: json['rewrite'] is Map
+          ? TranscriptRewrite.fromJson(
+              Map<String, dynamic>.from(json['rewrite'] as Map),
+            )
+          : null,
     );
   }
 
@@ -89,5 +101,6 @@ class TranscriptionResult {
     'consensus_transcript': consensusTranscript,
     'risk_notice': riskNotice,
     'diagnostics': diagnostics,
+    'rewrite': rewrite?.toJson(),
   };
 }

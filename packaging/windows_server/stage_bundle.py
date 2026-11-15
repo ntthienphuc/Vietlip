@@ -89,13 +89,13 @@ def main():
         "file": "SO_seed17.pt", "sha256": expected, "model": "auto-avsr-vi-so_seed17",
         "precision": "float32", "purpose": "Internal application evaluation",
     }, indent=2), encoding="utf8")
-    for name in ("VietLip.ico", "README_INSTALL.txt", "Start-VietLip.vbs", "verify_bundle.py"):
+    for name in ("VietLip.ico", "README_INSTALL.txt", "Start-VietLip.vbs", "verify_bundle.py", "rewrite.example.json"):
         shutil.copy2(Path(__file__).parent / name, output / name)
     print("Hashing the complete runtime payload", flush=True)
     entries = [{"path": str(path.relative_to(output)).replace("\\", "/"),
                 "bytes": path.stat().st_size, "sha256": sha256(path)}
                for path in sorted(output.rglob("*")) if path.is_file()]
-    manifest = {"app": "VietLip Server", "version": "1.7.0", "created": time.time(),
+    manifest = {"app": "VietLip Server", "version": "1.9.0", "created": time.time(),
                 "files": entries, "total_bytes": sum(item["bytes"] for item in entries)}
     (output / "PAYLOAD_MANIFEST.json").write_text(json.dumps(manifest, indent=2), encoding="utf8")
     print(json.dumps({"files": len(entries), "bytes": manifest["total_bytes"],

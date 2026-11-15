@@ -180,7 +180,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ),
                       subtitle: Text(
                         '${item.modelId.startsWith('QA-prerecorded-') ? 'Kiểm thử phát lại · ' : ''}'
-                        '${_formatDate(item.createdAt)}',
+                        '${_formatDate(item.createdAt)}'
+                        '${item.rewrite?.hasText == true
+                            ? ' · Có bản AI'
+                            : item.rewrite?.pending == true
+                            ? ' · AI đang xem lại'
+                            : ''}',
                         style: const TextStyle(
                           fontSize: 11,
                           color: AppColors.muted,

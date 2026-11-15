@@ -1,4 +1,4 @@
-"""Relocatable, visual-only defaults for the Windows companion application."""
+"""Relocatable SO17 defaults; optional text review has a separate local config."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import socket
 import urllib.request
 
 APP_NAME = "VietLip Server"
-APP_VERSION = "1.7.0"
+APP_VERSION = "1.9.0"
 ROOT = Path(__file__).resolve().parent
 
 

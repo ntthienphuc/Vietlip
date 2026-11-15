@@ -8,6 +8,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/app_brand.dart';
 import '../../widgets/status_notice.dart';
 import '../../widgets/connection_diagram.dart';
+import 'reading_method_setting.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({required this.settings, super.key});
@@ -158,6 +159,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
                 const SizedBox(height: 24),
                 const Divider(),
+                const SizedBox(height: 20),
+                ReadingMethodSetting(settings: widget.settings),
+                const SizedBox(height: 24),
+                const Divider(),
                 const SizedBox(height: 8),
                 const ExpansionTile(
                   tilePadding: EdgeInsets.zero,
@@ -194,6 +199,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     Text(
                       'Phụ đề trực tiếp chỉ dùng hình ảnh gửi tới máy chủ bạn đã nhập. '
+                      'Nếu bật AI sau phiên, văn bản được gửi tới dịch vụ đã cấu hình trên PC. '
                       'Video có âm thanh được lưu trên điện thoại để đối chiếu. '
                       'Lịch sử lưu trên thiết bị; ứng dụng không tự dùng video để huấn luyện.',
                       style: TextStyle(color: AppColors.muted, height: 1.6),

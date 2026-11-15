@@ -1,10 +1,18 @@
 import 'package:dio/dio.dart';
 
 import '../models/transcription_result.dart';
+import '../models/reading_method.dart';
+import '../models/transcript_rewrite.dart';
 import 'settings_controller.dart';
 
 class LipReaderApi {
-  LipReaderApi(this.settings, {Dio? dio})
+  LipReaderApi(SettingsController settings, {Dio? dio})
+    : this._(() => settings.apiUrl, dio);
+
+  LipReaderApi.atAddress(String address, {Dio? dio})
+    : this._(() => address, dio);
+
+  LipReaderApi._(this._address, Dio? dio)
     : _dio =
           dio ??
           Dio(
@@ -17,15 +25,46 @@ class LipReaderApi {
             ),
           );
 
-  final SettingsController settings;
+  final String Function() _address;
+  String get apiUrl => _address();
   final Dio _dio;
 
+  Future<Map<String, bool>> rewriteMethods() async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '$apiUrl/v1/rewrite-methods',
+      options: Options(receiveTimeout: const Duration(seconds: 5)),
+    );
+    final methods = response.data?['methods'] as List? ?? const [];
+    return {
+      for (final method in methods)
+        if (method is Map)
+          method['id'].toString(): method['configured'] == true,
+    };
+  }
+
+  Future<TranscriptRewrite> rewrite(String text, ReadingMethod method) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '$apiUrl/v1/rewrites',
+      data: {'text': text, 'method': method.id},
+      options: Options(
+        receiveTimeout: const Duration(seconds: 30),
+        sendTimeout: const Duration(seconds: 5),
+      ),
+    );
+    final value = TranscriptRewrite.fromJson(response.data ?? const {});
+    if (value.method != method.id ||
+        !{'completed', 'unchanged', 'unavailable'}.contains(value.status)) {
+      throw const FormatException('Phản hồi AI không hợp lệ.');
+    }
+    return value;
+  }
+
   Future<Map<String, dynamic>> health() async {
-    if (settings.apiUrl.isEmpty) {
+    if (apiUrl.isEmpty) {
       throw const FormatException('Nhập IP hiển thị trên VietLip Server.');
     }
     final response = await _dio.get<Map<String, dynamic>>(
-      '${settings.apiUrl}/healthz',
+      '$apiUrl/healthz',
       options: Options(
         receiveTimeout: const Duration(seconds: 5),
         sendTimeout: const Duration(seconds: 5),
@@ -51,7 +90,7 @@ class LipReaderApi {
     try {
       onStatus?.call('Đang tải video lên máy chủ…');
       final accepted = await _dio.post<Map<String, dynamic>>(
-        '${settings.apiUrl}/v1/jobs',
+        '$apiUrl/v1/jobs',
         data: await makeForm(),
         onSendProgress: (sent, total) {
           if (total > 0) onProgress?.call(sent / total);
@@ -65,7 +104,7 @@ class LipReaderApi {
       while (DateTime.now().isBefore(deadline)) {
         await Future<void>.delayed(const Duration(milliseconds: 800));
         final response = await _dio.get<Map<String, dynamic>>(
-          '${settings.apiUrl}/v1/jobs/$jobId',
+          '$apiUrl/v1/jobs/$jobId',
         );
         final payload = response.data ?? const <String, dynamic>{};
         final status = payload['status']?.toString() ?? '';
@@ -111,7 +150,7 @@ class LipReaderApi {
       if (error.response?.statusCode != 404) rethrow;
       onStatus?.call('Máy chủ đang đọc chuyển động môi…');
       final response = await _dio.post<Map<String, dynamic>>(
-        '${settings.apiUrl}/v1/transcriptions',
+        '$apiUrl/v1/transcriptions',
         data: await makeForm(),
         onSendProgress: (sent, total) {
           if (total > 0) onProgress?.call(sent / total);

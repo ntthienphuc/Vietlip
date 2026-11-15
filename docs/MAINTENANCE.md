@@ -18,15 +18,15 @@ Một cảnh báo deprecation từ thư viện Starlette vẫn còn. Dart đã �
 
 ## Bộ cài gồm hai file
 
-Bộ mới nhất: `E:\Project\Lip_App\lip_reader\output\VietLip-1.7.0`.
+Bộ mới nhất: `output/VietLip-1.9.0`.
 
-- `VietLip-1.7.0.apk`: cài cập nhật Android, giữ lịch sử.
-- `VietLip-Windows-1.7.0.zip`: giải nén toàn bộ, đọc `BAT_DAU.txt`, chạy EXE
+- `VietLip-1.9.0.apk`: cài cập nhật Android, giữ lịch sử.
+- `VietLip-Windows-1.9.0.zip`: giải nén toàn bộ, đọc `BAT_DAU.txt`, chạy EXE
   trong `02-Server-Windows`, giữ các BIN cạnh EXE.
 
-Bản 1.6.3 trong Downloads là bản trước. Thư mục 1.7.0 chỉ có hai file phân phối;
+Bản trong Downloads là bản trước. Thư mục 1.9.0 chỉ có hai file phân phối;
 biên nhận, source và bằng chứng kiểm thử nằm trong project. Xem
-`UI_UX_POLISH_REPORT.md` để biết phạm vi kiểm chứng của bản này.
+`READING_METHODS_1_9.md` để biết cách chọn và cấu hình AI sau phiên.
 
 Tạo lại gói phân phối từ bộ cài đã có manifest:
 

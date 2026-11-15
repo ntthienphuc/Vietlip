@@ -74,7 +74,7 @@ class _LipReaderAppState extends State<LipReaderApp> {
               body: Center(child: Text('Không tìm thấy kết quả.')),
             );
           }
-          return ResultScreen(result: result);
+          return ResultScreen(result: result, history: widget.history);
         },
       ),
     ],
