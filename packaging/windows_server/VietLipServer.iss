@@ -8,12 +8,12 @@
 [Setup]
 AppId=VietLip.Server
 AppName=VietLip Server
-AppVersion=1.6.3
+AppVersion=1.7.0
 AppPublisher=VietLip
 DefaultDirName={localappdata}\Programs\VietLip Server
 DefaultGroupName=VietLip
 OutputDir={#OutputDir}
-OutputBaseFilename=VietLip-Server-Setup-1.6.3
+OutputBaseFilename=VietLip-Server-Setup-1.7.0
 SetupIconFile={#StageDir}\VietLip.ico
 UninstallDisplayIcon={app}\VietLip.ico
 PrivilegesRequired=lowest
@@ -32,7 +32,13 @@ InfoBeforeFile=README_INSTALL.txt
 Name: desktopicon; Description: "Create a desktop shortcut"; Flags: unchecked
 
 [Files]
-Source: "{#StageDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#StageDir}\*"; DestDir: "{app}"; Excludes: "*.pyc,*.pyo,__pycache__"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+[InstallDelete]
+Type: files; Name: "{app}\server\app\services\llm_postprocessor.py"
+Type: files; Name: "{app}\server\app\services\candidate_selector.py"
+Type: files; Name: "{app}\server\app\services\__pycache__\llm_postprocessor.*.pyc"
+Type: files; Name: "{app}\server\app\services\__pycache__\candidate_selector.*.pyc"
 
 [Icons]
 Name: "{group}\VietLip Server"; Filename: "{app}\runtime\pythonw.exe"; Parameters: """{app}\server\desktop_launcher.py"""; WorkingDir: "{app}"; IconFilename: "{app}\VietLip.ico"

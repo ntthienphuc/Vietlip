@@ -1,22 +1,22 @@
-# VietLip 1.6.3
+# VietLip 1.7.0
 
 Ứng dụng Android đọc môi tiếng Việt qua camera, kết nối không dây tới server
 Windows trong cùng mạng nội bộ. Server hiển thị IP; người dùng nhập IP trong
 **Cài đặt → Lưu và kiểm tra**. Phụ đề live chỉ dùng hình ảnh. Video lưu có âm
 thanh để đối chiếu khi thử nghiệm.
 
-**Bộ cài local:** `C:\Users\thien\Downloads\VietLip` — gồm đúng hai file:
+**Bộ cài 1.7.0:** `E:\Project\Lip_App\lip_reader\output\VietLip-1.7.0` — gồm đúng hai file:
 APK Android và ZIP Windows. Giải nén toàn bộ ZIP, rồi mở `BAT_DAU.txt`.
 
 ## Dùng bộ cài
 
-1. Chạy `02-Server-Windows/VietLip-Server-Setup-1.6.3.exe`; giữ các file `.bin`
+1. Chạy `02-Server-Windows/VietLip-Server-Setup-1.7.0.exe`; giữ các file `.bin`
    bên cạnh. Bộ cài có sẵn Python, thư viện CPU/CUDA và checkpoint SO17.
 2. Mở **VietLip Server** từ Start Menu và chờ **Sẵn sàng đọc môi**.
-3. Cài `VietLip-1.6.3.apk` đi kèm riêng lên Android. Cập nhật trực tiếp để giữ
+3. Cài `VietLip-1.7.0.apk` đi kèm riêng lên Android. Cập nhật trực tiếp để giữ
    lịch sử trên thiết bị.
 4. PC và điện thoại kết nối cùng mạng Wi-Fi/LAN có cho phép liên lạc giữa
-   thiết bị. Nhập IP server trong app, kiểm tra, rồi **Bắt đầu live**.
+   thiết bị. Nhập IP server trong app, kiểm tra, rồi **Bắt đầu đọc môi**.
 
 Mạng khách có thể tách thiết bị dù cùng SSID. Nếu kết nối thất bại, kiểm tra IP,
 cổng 7100, quyền mạng của server và cấu hình router. Không cần tài khoản cloud
@@ -25,7 +25,9 @@ hay LLM/API key. Xem hướng dẫn trong
 
 ## Giao diện và hành vi
 
-- Tên và biểu tượng VietLip; nền sáng, màu xanh ngọc, preview dọc lớn.
+- Tên và biểu tượng VietLip; nền sáng, xanh ngọc, typography Nunito thống nhất.
+- Khung “Phụ đề trực tiếp” luôn nằm ngay dưới preview từ màn hình đầu. Trước khi bắt đầu có hướng dẫn ngắn; khi đọc môi, chữ hiện trong khung này.
+- Nút bắt đầu/kết thúc cố định, dễ chạm; trạng thái máy chủ được kiểm tra thật và có lối vào Cài đặt.
 - Ảnh dùng tỷ lệ gốc và `BoxFit.contain`, không bóp mặt; guide theo vùng hình.
 - Phụ đề có vùng riêng, chữ lớn, phần tạm gạch dưới. Mở rộng để xem/sao chép
   toàn phiên. Điều hướng ẩn khi đang live.
@@ -41,7 +43,7 @@ hay LLM/API key. Xem hướng dẫn trong
 ## Mô hình và giới hạn
 
 Giữ **SO17 native, float32, beam 3 / CTC 0.1, 25 fps, cửa sổ 6 giây và bước
-1,5 giây**. Nhánh âm vị, LLM và checkpoint trộn không bật mặc định.
+1,5 giây**. Runtime chỉ dùng SO17; đã gỡ LLM và nhánh chấm lại bằng âm vị. Các tài liệu thử nghiệm cũ được giữ để đối chiếu.
 
 Ứng dụng vẫn là bản thử nghiệm, **chưa đạt độ chính xác cao với câu nói tự do**.
 Phiên Wi-Fi bốn câu ngắn mới nhất có WER 66,67% và CER 50,00%; đây là lỗi chữ
@@ -79,3 +81,10 @@ mục build vào Git. Mã nguồn của bên thứ ba và license được giữ
 Các bản xuất cũ chuyển vào `output/archive/pre_vietlip_1_6`; script bộ cài cũ
 chuyển vào `packaging/legacy_windows_server_1_1`. Video, bằng chứng, model và
 thử nghiệm cũ được giữ để đối chiếu; chúng không nằm trong bộ cài người dùng.
+
+## UI/UX 1.7.0
+
+Xem [audit](UI_UX_AUDIT.md) và [báo cáo thay đổi, kiểm thử](UI_UX_POLISH_REPORT.md).
+Gỡ lựa chọn chế độ/ngữ cảnh/LLM; giữ một luồng nhận dạng hình ảnh. Lịch sử cũ
+vẫn đọc được và hiển thị phụ đề thị giác gốc. Các endpoint upload/jobs/WebSocket
+giữ đường dẫn; API 1.3.0 chỉ nhận `mode=visual_only`.

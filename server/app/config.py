@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 
 def _as_bool(value: str | None, default: bool) -> bool:
@@ -34,14 +33,6 @@ class Settings:
     nbest: int
     ctc_weight: float
     max_context_chars: int
-    llm_provider: str
-    llm_base_url: Optional[str]
-    llm_api_key: Optional[str]
-    llm_model: Optional[str]
-    llm_timeout_seconds: float
-    llm_num_ctx: int
-    llm_max_output_tokens: int
-    llm_keep_alive: str
     max_queued_jobs: int
     job_retention_seconds: int
     realtime_enabled: bool
@@ -89,12 +80,12 @@ class Settings:
         model_root = server_root / "vendor" / "auto_avsr"
         vocabulary_root = server_root / "assets" / "tokenizers"
         return cls(
-            api_version="1.2.0",
+            api_version="1.3.0",
             model_id=os.getenv(
                 "LIP_MODEL_ID",
                 "auto-avsr-vi-so_seed17",
             ),
-            model_backend=os.getenv("LIP_MODEL_BACKEND", "native_avsr"),
+            model_backend="native_avsr",
             model_load_on_startup=_as_bool(
                 os.getenv("LIP_MODEL_LOAD_ON_STARTUP"),
                 False,
@@ -133,19 +124,6 @@ class Settings:
             nbest=int(os.getenv("LIP_NBEST", "10")),
             ctc_weight=float(os.getenv("LIP_CTC_WEIGHT", "0.1")),
             max_context_chars=int(os.getenv("LIP_MAX_CONTEXT_CHARS", "100")),
-            llm_provider=os.getenv(
-                "LIP_LLM_PROVIDER",
-                "openai_compatible",
-            )
-            .strip()
-            .lower(),
-            llm_base_url=os.getenv("LIP_LLM_BASE_URL") or None,
-            llm_api_key=os.getenv("LIP_LLM_API_KEY") or None,
-            llm_model=os.getenv("LIP_LLM_MODEL") or None,
-            llm_timeout_seconds=float(os.getenv("LIP_LLM_TIMEOUT_SECONDS", "45")),
-            llm_num_ctx=int(os.getenv("LIP_LLM_NUM_CTX", "2048")),
-            llm_max_output_tokens=int(os.getenv("LIP_LLM_MAX_OUTPUT_TOKENS", "320")),
-            llm_keep_alive=os.getenv("LIP_LLM_KEEP_ALIVE", "0"),
             max_queued_jobs=int(os.getenv("LIP_MAX_QUEUED_JOBS", "8")),
             job_retention_seconds=int(os.getenv("LIP_JOB_RETENTION_SECONDS", "1800")),
             realtime_enabled=_as_bool(

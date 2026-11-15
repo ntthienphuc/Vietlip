@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-import asyncio
-import json
 import time
 from dataclasses import replace
 
-import httpx
 import numpy as np
 import cv2
 from fastapi.testclient import TestClient
@@ -13,12 +10,6 @@ from fastapi.testclient import TestClient
 from app.config import Settings
 from app.main import create_app
 from app.services.engine import MockEngine
-from app.services.llm_postprocessor import (
-    MockLlmPostprocessor,
-    OllamaLlmPostprocessor,
-    OpenAICompatibleLlmPostprocessor,
-    create_llm_postprocessor,
-)
 from app.services.nbest_consensus import summarize_nbest
 from app.services.realtime import ContinuousTranscript, LocalAgreement
 
@@ -203,101 +194,6 @@ def test_device_selection_falls_back_to_cpu():
     )
 
 
-def test_local_llm_does_not_require_fake_api_key():
-    settings = replace(
-        Settings.from_env(),
-        llm_provider="openai_compatible",
-        llm_base_url="http://127.0.0.1:11434/v1",
-        llm_api_key=None,
-        llm_model="local-instruct",
-    )
-
-    processor = create_llm_postprocessor(settings)
-
-    assert processor.available is True
-    assert processor.model_label == "local-instruct"
-    assert isinstance(processor, OpenAICompatibleLlmPostprocessor)
-
-
-def test_ollama_health_and_context_select_are_constrained_to_nbest():
-    def handler(request: httpx.Request) -> httpx.Response:
-        if request.url.path == "/api/tags":
-            return httpx.Response(
-                200,
-                json={"models": [{"name": "qwen2.5:7b"}]},
-            )
-        payload = json.loads(request.content)
-        assert payload["keep_alive"] == 0
-        assert payload["options"]["num_ctx"] == 2048
-        assert payload["format"]["properties"]["selected_index"]["maximum"] == 1
-        return httpx.Response(
-            200,
-            json={
-                "message": {
-                    "content": json.dumps({"selected_index": 1, "reason": "đúng ngữ cảnh"})
-                },
-                "total_duration": 12_000_000,
-                "load_duration": 3_000_000,
-                "prompt_eval_count": 80,
-                "eval_count": 12,
-            },
-        )
-
-    processor = OllamaLlmPostprocessor(
-        base_url="http://ollama.test",
-        model="qwen2.5:7b",
-        timeout_seconds=5,
-        num_ctx=2048,
-        max_output_tokens=160,
-        keep_alive="0",
-        transport=httpx.MockTransport(handler),
-    )
-
-    async def exercise():
-        assert await processor.healthcheck() is True
-        return await processor.process(
-            mode="context_select",
-            visual_transcript="xin chào",
-            alternatives=[{"text": "xin chào"}, {"text": "chào bạn"}],
-            context_hint="gặp bạn",
-        )
-
-    result = asyncio.run(exercise())
-    assert result.assisted_transcript == "chào bạn"
-    assert result.diagnostics["status"] == "ok"
-    assert result.diagnostics["selected_index"] == 1
-    assert result.diagnostics["total_duration_ms"] == 12
-
-
-def test_ollama_assist_preserves_degenerate_repetition_without_calling_llm():
-    def handler(request: httpx.Request) -> httpx.Response:
-        raise AssertionError(f"Unexpected LLM request: {request.url}")
-
-    processor = OllamaLlmPostprocessor(
-        base_url="http://ollama.test",
-        model="qwen2.5:7b",
-        timeout_seconds=5,
-        num_ctx=2048,
-        max_output_tokens=320,
-        keep_alive="0",
-        transport=httpx.MockTransport(handler),
-    )
-    repeated = " ".join(["lời"] * 34)
-
-    result = asyncio.run(
-        processor.process(
-            mode="llm_assist",
-            visual_transcript=repeated,
-            alternatives=[{"text": repeated}],
-            context_hint="bài giảng",
-        )
-    )
-
-    assert result.assisted_transcript == repeated
-    assert result.diagnostics["status"] == "ok"
-    assert result.diagnostics["constraint"] == "preserve_visual_low_information"
-
-
 def test_rejects_non_mp4_extension():
     with TestClient(create_app(engine=MockEngine())) as client:
         response = client.post(
@@ -388,37 +284,21 @@ def test_async_job_returns_202_then_completed_result():
         assert health["queued_jobs"] == 0
 
 
-def test_llm_mode_requires_explicit_risk_acceptance():
-    with TestClient(create_app(engine=MockEngine(), llm=MockLlmPostprocessor())) as client:
-        response = client.post(
-            "/v1/transcriptions",
-            files={"video": ("sample.mp4", fake_mp4(), "video/mp4")},
-            data={
-                "mode": "llm_assist",
-                "context_hint": "chào hỏi",
-            },
-        )
-    assert response.status_code == 422
-    assert response.json()["detail"]["code"] == "llm_risk_not_accepted"
-
-
-def test_llm_assist_preserves_visual_transcript_side_by_side():
-    with TestClient(create_app(engine=MockEngine(), llm=MockLlmPostprocessor())) as client:
-        response = client.post(
-            "/v1/transcriptions",
-            files={"video": ("sample.mp4", fake_mp4(), "video/mp4")},
-            data={
-                "mode": "llm_assist",
-                "context_hint": "chào hỏi",
-                "accept_llm_risk": "true",
-            },
-        )
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["transcript"] == "xin chào"
-    assert payload["assisted_transcript"] == "xin chào nhé"
-    assert payload["processing_mode"] == "llm_assist"
-    assert payload["status"] == "review_required"
+def test_removed_modes_are_rejected_on_both_upload_routes():
+    with TestClient(create_app(engine=MockEngine())) as client:
+        for route in ("/v1/transcriptions", "/v1/jobs"):
+            for mode in ("llm_assist", "context_select", "unknown"):
+                response = client.post(
+                    route,
+                    files={"video": ("sample.mp4", fake_mp4(), "video/mp4")},
+                    data={"mode": mode, "accept_llm_risk": "true", "context_hint": "chào hỏi"},
+                )
+                assert response.status_code == 422
+                assert response.json()["detail"]["code"] == "invalid_mode"
+        health = client.get("/healthz").json()
+        assert "llm_model" not in health
+        assert "llm_available" not in health
+        assert not hasattr(client.app.state, "llm")
 
 
 def test_model_error_does_not_leak_internal_exception():

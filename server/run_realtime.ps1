@@ -34,7 +34,6 @@ $env:LIP_CTC_WEIGHT = $CtcWeight.ToString([cultureinfo]::InvariantCulture)
 $env:LIP_CPU_THREADS = '4'
 $env:LIP_REALTIME_OVERLAP_SECONDS = '1'
 $env:LIP_REALTIME_DECODE_INTERVAL_SECONDS = $UpdateSeconds.ToString([cultureinfo]::InvariantCulture)
-$env:LIP_LLM_PROVIDER = 'none'
 if ($TraceDirectory) {
     $env:LIP_REALTIME_TRACE_DIR = [IO.Path]::GetFullPath($TraceDirectory)
 }

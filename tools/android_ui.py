@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import time
 import xml.etree.ElementTree as ET
 
 
@@ -23,9 +24,13 @@ def main():
         return subprocess.check_output(["adb", *parts], timeout=30)
 
     def snapshot(suffix):
-        status = adb("shell", "uiautomator", "dump", "/sdcard/vietlip-ui.xml")
-        if b"dumped to:" not in status:
-            raise RuntimeError("No fresh Android UI dump")
+        for attempt in range(3):
+            status = adb("shell", "uiautomator", "dump", "/sdcard/vietlip-ui.xml")
+            if b"dumped to:" in status:
+                break
+            time.sleep(0.4)
+        else:
+            raise RuntimeError("No fresh Android UI dump; refusing stale coordinates")
         raw = adb("exec-out", "cat", "/sdcard/vietlip-ui.xml")
         args.output.with_name(args.output.name+suffix+".xml").write_bytes(raw)
         return list(ET.fromstring(raw).iter("node"))

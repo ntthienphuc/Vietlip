@@ -9,7 +9,7 @@ import socket
 import urllib.request
 
 APP_NAME = "VietLip Server"
-APP_VERSION = "1.6.3"
+APP_VERSION = "1.7.0"
 ROOT = Path(__file__).resolve().parent
 
 
@@ -28,7 +28,6 @@ def configure_runtime(device: str = "auto", trace_directory: str = "") -> None:
         "LIP_PRECISION": "float32",
         "LIP_ALLOW_CPU_FALLBACK": "true",
         "LIP_CPU_THREADS": "4",
-        "LIP_LLM_PROVIDER": "none",
         "LIP_REALTIME_SAMPLE_FPS": "25",
         "LIP_REALTIME_WINDOW_SECONDS": "6",
         "LIP_REALTIME_OVERLAP_SECONDS": "1",

@@ -121,60 +121,45 @@ void main() {
     );
   });
 
-  testWidgets('explains an unavailable LLM without hiding visual text', (
+  testWidgets('legacy history shows only the original visual transcript', (
     tester,
   ) async {
-    final result = TranscriptionResult(
-      requestId: 'request-llm-fallback',
-      transcript: 'xin chào',
-      status: 'review_required',
-      modelId: 'auto-avsr-test',
-      elapsedMs: 1250,
-      numFrames: 50,
-      createdAt: DateTime.utc(2026, 7, 24),
-      alternatives: const [],
-      processingMode: 'llm_assist',
-      diagnostics: const {
-        'llm': {'status': 'unavailable', 'message': 'LLM chưa được cấu hình.'},
+    final result = TranscriptionResult.fromJson({
+      'request_id': 'legacy',
+      'transcript': 'xin chào',
+      'processing_mode': 'llm_assist',
+      'assisted_transcript': 'Một câu khác do trợ lý viết lại.',
+      'diagnostics': {
+        'llm': {'provider': 'ollama', 'model': 'legacy-model'},
       },
-    );
-
+    });
     await tester.pumpWidget(MaterialApp(home: ResultScreen(result: result)));
-
-    expect(find.text('Không có bản hỗ trợ LLM'), findsOneWidget);
     expect(find.text('xin chào'), findsOneWidget);
-    expect(find.text('1.25 giây'), findsOneWidget);
+    expect(find.textContaining('trợ lý viết lại'), findsNothing);
+    expect(find.textContaining('LLM'), findsNothing);
+    expect(find.textContaining('legacy-model'), findsNothing);
+    expect(
+      result.toJson()['assisted_transcript'],
+      'Một câu khác do trợ lý viết lại.',
+    );
+    expect(tester.takeException(), isNull);
   });
 
-  testWidgets('shows LLM provenance and reason next to assisted text', (
+  testWidgets('session duration is distinguished from batch processing time', (
     tester,
   ) async {
-    final result = TranscriptionResult(
-      requestId: 'request-llm-ok',
-      transcript: 'xin chào',
-      status: 'review_required',
-      modelId: 'auto-avsr-test',
-      elapsedMs: 6000,
-      numFrames: 50,
-      createdAt: DateTime.utc(2026, 7, 24),
-      alternatives: const [],
-      processingMode: 'llm_assist',
-      assistedTranscript: 'Xin chào.',
-      riskNotice: 'LLM có thể suy đoán.',
-      diagnostics: const {
-        'llm': {
-          'status': 'ok',
-          'provider': 'ollama',
-          'model': 'qwen2.5:7b',
-          'total_duration_ms': 2500,
-          'reason': 'Chuẩn hóa dấu câu.',
-        },
-      },
-    );
-
+    final result = TranscriptionResult.fromJson({
+      'request_id': 'live-duration',
+      'transcript': 'cảm ơn bạn',
+      'elapsed_ms': 51000,
+      'diagnostics': {'source': 'realtime'},
+    });
     await tester.pumpWidget(MaterialApp(home: ResultScreen(result: result)));
-
-    expect(find.text('ollama · qwen2.5:7b · 2.50 giây'), findsOneWidget);
-    expect(find.text('Lý do LLM: Chuẩn hóa dấu câu.'), findsOneWidget);
+    await tester.ensureVisible(find.text('Thông tin phiên'));
+    await tester.tap(find.text('Thông tin phiên'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Thời lượng phiên: 51.00 giây'), findsOneWidget);
+    expect(find.textContaining('Thời gian xử lý:'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 }

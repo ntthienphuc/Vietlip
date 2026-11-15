@@ -40,6 +40,8 @@ class TranscriptionResult {
   final DateTime createdAt;
   final List<AlternativeTranscript> alternatives;
   final Map<String, dynamic> diagnostics;
+  // Legacy metadata is retained when older history entries are read and saved.
+  // Recognition and the current UI always use the visual transcript.
   final String processingMode;
   final String? assistedTranscript;
   final String? consensusTranscript;

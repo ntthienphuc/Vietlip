@@ -6,7 +6,7 @@ from app.services.native_engine import NativeAvsrEngine
 from app.services.phoneme_rescorer import PhonemeRescorer
 
 
-def test_reordered_caption_is_aligned_to_reordered_token_ids(monkeypatch):
+def test_native_engine_ignores_legacy_phoneme_rescorer(monkeypatch):
     engine = NativeAvsrEngine.__new__(NativeAvsrEngine)
     engine._torch = torch
     model = torch.nn.Module()
@@ -43,16 +43,16 @@ def test_reordered_caption_is_aligned_to_reordered_token_ids(monkeypatch):
 
     def align(logp, ids, *args, **kwargs):
         captured.extend(ids)
-        return [dict(text="two", start=0, end=0.2)]
+        return [dict(text="one", start=0, end=0.2)]
 
     monkeypatch.setattr("app.services.native_engine.align_words", align)
     result = engine._decode_native(
         SimpleNamespace(tensor=torch.zeros(5, 4), num_frames=5, diagnostics={}), realtime=True
     )
-    assert result.transcript == "two"
-    assert captured == [2]
+    assert result.transcript == "one"
+    assert captured == [1]
     assert all("_token_ids" not in c for c in result.alternatives)
-    assert result.diagnostics["experimental_phoneme_rescoring"]["enabled"]
+    assert "experimental_phoneme_rescoring" not in result.diagnostics
 
 
 def test_unsupported_candidate_does_not_run_phoneme_head():

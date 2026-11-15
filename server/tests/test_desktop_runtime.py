@@ -45,7 +45,8 @@ def test_desktop_uses_bundled_files_and_ignores_experiment_environment(tmp_path,
     settings = Settings.from_env()
     assert settings.checkpoint_path == tmp_path / "models/SO_seed17.pt"
     assert settings.device == "cpu"
-    assert settings.llm_provider == "none"
+    assert not hasattr(settings, "llm_provider")
+    assert "LIP_LLM_PROVIDER" not in runtime.os.environ
     assert "LIP_EXPERIMENTAL_PHONEME_HEAD" not in runtime.os.environ
     assert "LIP_EXPERIMENTAL_VISUAL_CONFIRMATION" not in runtime.os.environ
     assert settings.realtime_decode_interval_seconds == 1.5

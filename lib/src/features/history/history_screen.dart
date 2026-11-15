@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../data/history_repository.dart';
 import '../../models/transcription_result.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/status_notice.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({required this.history, super.key});
@@ -39,10 +40,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
     super.dispose();
   }
 
-  void _reload() {
+  Future<void> _reload() async {
     setState(() {
       _future = widget.history.list();
     });
+    try {
+      await _future;
+    } catch (_) {
+      // FutureBuilder renders the recoverable error state.
+    }
   }
 
   @override
@@ -51,8 +57,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text(
-            'Lịch sử nhận dạng',
-            style: TextStyle(fontWeight: FontWeight.w800),
+            'Lịch sử',
+            style: TextStyle(fontWeight: FontWeight.w700),
           ),
           actions: [
             IconButton(
@@ -63,7 +69,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   builder: (context) => AlertDialog(
                     title: const Text('Xóa lịch sử?'),
                     content: const Text(
-                      'Các bản đọc môi được lưu cục bộ trên thiết bị sẽ bị xóa.',
+                      'Các bản phụ đề trong lịch sử trên điện thoại sẽ bị xóa. Video đã lưu vẫn được giữ lại.',
                     ),
                     actions: [
                       TextButton(
@@ -72,7 +78,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ),
                       FilledButton(
                         onPressed: () => Navigator.pop(context, true),
-                        child: const Text('Xóa'),
+                        child: const Text('Xóa lịch sử'),
                       ),
                     ],
                   ),
@@ -88,17 +94,29 @@ class _HistoryScreenState extends State<HistoryScreen> {
         body: FutureBuilder<List<TranscriptionResult>>(
           future: _future,
           builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return Padding(
+                padding: const EdgeInsets.all(20),
+                child: StatusNotice(
+                  title: 'Chưa mở được lịch sử',
+                  detail: 'Hãy thử tải lại các phiên đã lưu trên điện thoại.',
+                  error: true,
+                  action: 'Tải lại lịch sử',
+                  onAction: _reload,
+                ),
+              );
+            }
             if (!snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
+              return Center(child: CircularProgressIndicator());
             }
             final items = snapshot.data!;
             if (items.isEmpty) {
               return const _EmptyHistory();
             }
             return RefreshIndicator(
-              onRefresh: () async => _reload(),
+              onRefresh: _reload,
               child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
                 itemCount: items.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
@@ -109,15 +127,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         horizontal: 16,
                         vertical: 8,
                       ),
-                      leading: Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: AppColors.primarySoft,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Icon(
-                          Icons.short_text_rounded,
+                      leading: const Padding(
+                        padding: EdgeInsets.only(top: 4),
+                        child: Icon(
+                          Icons.closed_caption_outlined,
                           color: AppColors.primary,
                         ),
                       ),
@@ -127,7 +140,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             : item.transcript,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                       subtitle: Text(
                         '${item.modelId.startsWith('QA-prerecorded-') ? 'Kiểm thử phát lại · ' : ''}'
@@ -159,23 +172,33 @@ class _EmptyHistory extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(32),
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.history_toggle_off, size: 58, color: AppColors.muted),
-            SizedBox(height: 14),
-            Text(
-              'Chưa có bản đọc môi nào',
-              style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
+            const Icon(
+              Icons.history_toggle_off,
+              size: 58,
+              color: AppColors.primary,
             ),
-            SizedBox(height: 7),
-            Text(
-              'Kết quả sẽ được lưu cục bộ tại đây để bạn đối chiếu.',
+            const SizedBox(height: 24),
+            const Text(
+              'Chưa có bản đọc môi nào',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Kết thúc một phiên đọc môi để lưu phụ đề và xem lại tại đây.',
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.muted),
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: () => context.go('/read'),
+              icon: const Icon(Icons.play_arrow_rounded),
+              label: const Text('Bắt đầu đọc môi'),
             ),
           ],
         ),

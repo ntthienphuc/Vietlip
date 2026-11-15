@@ -69,7 +69,7 @@ def package(kit, output, receipt):
             "3. Mở VietLip Server từ Start Menu và chờ Sẵn sàng đọc môi.\n"
             f"4. Cài file VietLip-{version}.apk đi kèm riêng trên Android.\n"
             "5. PC và điện thoại dùng cùng Wi-Fi; nhập IP hiển thị trên server\n"
-            "   vào Cài đặt của app, bấm Lưu và kiểm tra rồi Bắt đầu live.\n\n"
+            "   vào Cài đặt của app, bấm Lưu và kiểm tra rồi Bắt đầu đọc môi.\n\n"
             "Hướng dẫn và giới hạn thử nghiệm nằm trong 03-Huong-dan.\n"
             "Phụ đề chỉ dùng hình ảnh; độ chính xác câu tự do còn hạn chế.\n"
         ).encode("utf-8-sig")

@@ -21,7 +21,7 @@ class _RecordingExportCardState extends State<RecordingExportCard> {
       final saved = await RecordingExport.save(widget.path);
       if (saved && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đã lưu bản MP4 vào nơi bạn chọn')),
+          const SnackBar(content: Text('Đã lưu video vào nơi bạn chọn')),
         );
       }
     } on PlatformException catch (error) {
@@ -58,11 +58,11 @@ class _RecordingExportCardState extends State<RecordingExportCard> {
           children: [
             const Text(
               'Video của phiên',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
             ),
             const SizedBox(height: 6),
             const Text(
-              'Lưu bản MP4 có âm thanh để xem lại hoặc chia sẻ. '
+              'Lưu video có âm thanh để đối chiếu. '
               'Bản gốc vẫn được giữ trong ứng dụng.',
             ),
             const SizedBox(height: 12),

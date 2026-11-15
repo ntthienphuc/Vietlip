@@ -40,7 +40,7 @@ def main():
             adb('shell', 'input', 'swipe', '360', '350', '360', '1150', '350')
             nodes = ui(f'{i+1}-ready')
             started = time.monotonic()
-            tap(nodes, 'Bắt đầu live')
+            tap(nodes, 'Bắt đầu đọc môi')
             time.sleep(2)
             live = ui(f'{i+1}-live')
             labels = [n.get('content-desc', '') for n in live]
@@ -56,19 +56,19 @@ def main():
             # Technical telemetry lives in the details sheet, leaving room for captions.
             tap(live, 'Thông tin phiên')
             details = ui(f'{i+1}-details')
-            fps = [n.get('content-desc', '') for n in details if 'fps' in n.get('content-desc', '')]
+            fps = [n.get('content-desc', '') for n in details if 'khung hình/giây' in n.get('content-desc', '')]
             adb('shell','input','keyevent','4')
             live = ui(f'{i+1}-resumed')
-            measured = [int(n) for s in fps for n in re.findall(r'Hình (\d+) fps', s)]
+            measured = [int(n) for s in fps for n in re.findall(r'Camera: (\d+) khung hình/giây', s)]
             if not measured or min(measured) < 20:
                 tap(live, 'Kết thúc phiên')
                 raise RuntimeError(f'Round {i+1}: camera transport not healthy: {fps}')
             tap(live, 'Kết thúc phiên')
             stopped = ui(f'{i+1}-stopped')
-            if not any(n.get('content-desc') == 'Bắt đầu live' for n in stopped):
+            if not any(n.get('content-desc') == 'Bắt đầu đọc môi' for n in stopped):
                 adb('shell', 'input', 'swipe', '360', '350', '360', '1150', '350')
                 stopped = ui(f'{i+1}-settled')
-            if not any(n.get('content-desc') == 'Bắt đầu live' for n in stopped):
+            if not any(n.get('content-desc') == 'Bắt đầu đọc môi' for n in stopped):
                 raise RuntimeError(f'Round {i+1}: stop did not settle')
             records.append(dict(round=i+1, first_ui_observed_seconds=round(observed,3), fps=fps))
             (args.output/'RESULTS.json').write_text(json.dumps(records,ensure_ascii=False,indent=2),encoding='utf8')

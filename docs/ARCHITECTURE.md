@@ -1,6 +1,6 @@
 # Application maintenance
 
-Current app: **VietLip 1.6.0**. User connections use local Wi-Fi/LAN. The desktop
+Current app: **VietLip 1.7.0**. User connections use local Wi-Fi/LAN. The desktop
 server shows its IP; Android accepts an IP or full URL and defaults to port 7100.
 The Windows installer bundles Python 3.11, CPU/CUDA dependencies and SO17.
 See `PROJECT_MAP.md` and `packaging/windows_server/README.md` for packaging.
@@ -35,7 +35,8 @@ server service rows are relative to `server/app/services`.
 ## Maintenance boundaries
 
 - `server/app` is production runtime code; `server/experiments` contains optional
-  trials. Phoneme and LLM experiments are disabled in the standard launcher.
+  trials. LLM post-processing and the native phoneme-rescoring branch were removed
+  in 1.7.0. Legacy history metadata is retained for storage compatibility.
 - `server/vendor` and `packages/camera_android_camerax` retain upstream notices.
   Format application code without mass-editing vendor code.
 - Models, recordings, signing credentials and generated reports remain local.
@@ -44,7 +45,9 @@ server service rows are relative to `server/app/services`.
 - Video audio is for reference only. Live inference consumes JPEG frames.
 - A post-frame acknowledgement measures Flutter delivery plus return transport;
   it does not measure physical screen scanout or human-labeled speech end.
-- Keep protocol 2 / API 1.2.0 compatible independently of the app version.
+- Keep protocol 2 compatible independently of the app version. API 1.3.0 retains
+  upload/job/WS routes and accepts only visual_only mode. Old assisted-mode
+  submissions are rejected explicitly instead of silently rewriting text.
 
 ## Checks
 

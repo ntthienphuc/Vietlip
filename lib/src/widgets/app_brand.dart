@@ -4,7 +4,7 @@ import '../theme/app_theme.dart';
 
 abstract final class AppBrand {
   static const name = 'VietLip';
-  static const tagline = 'Nhìn chuyển động · đọc lời nói';
+  static const tagline = 'Đọc môi tiếng Việt';
 }
 
 /// The same simple speech mark is used by the launcher and capture header.
@@ -17,11 +17,7 @@ class BrandMark extends StatelessWidget {
     width: size,
     height: size,
     decoration: BoxDecoration(
-      gradient: const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [AppColors.primary, Color(0xFF104B59)],
-      ),
+      color: AppColors.primary,
       borderRadius: BorderRadius.circular(size * .3),
     ),
     child: Icon(Icons.subtitles_rounded, color: Colors.white, size: size * .6),
@@ -44,7 +40,7 @@ class CaptureBrandHeader extends StatelessWidget {
               AppBrand.name,
               style: TextStyle(
                 fontSize: 23,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
                 letterSpacing: -.5,
               ),
             ),
@@ -53,8 +49,8 @@ class CaptureBrandHeader extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
                 color: AppColors.muted,
               ),
             ),

@@ -73,18 +73,6 @@ class NativeAvsrEngine(AutoAvsrEngine):
         self._model = model.to(device).eval()
         self.effective_precision = "float16_encoder_float32_decoder" if use_half else "float32"
         self.device_label = device
-        self._phoneme_rescorer = None
-        head_path = os.getenv("LIP_EXPERIMENTAL_PHONEME_HEAD", "").strip()
-        if head_path:
-            from .phoneme_rescorer import PhonemeRescorer
-
-            self._phoneme_rescorer = PhonemeRescorer(
-                head_path,
-                os.environ["LIP_EXPERIMENTAL_VPHON_ROOT"],
-                self.settings.checkpoint_path,
-                device,
-                float(os.getenv("LIP_EXPERIMENTAL_PHONEME_WEIGHT", "1")),
-            )
         self._beams = {}
         self._use_incremental = os.getenv("LIP_INCREMENTAL_DECODER", "1") == "1"
         self._cpu_ctc = os.getenv("LIP_CTC_PREFIX_DEVICE", "cpu") == "cpu"
@@ -157,7 +145,6 @@ class NativeAvsrEngine(AutoAvsrEngine):
             greedy_ids = [i for i in greedy_ids if 0 < i < model.eos]
             decoder = self.settings.realtime_decoder if realtime else "beam"
             alternatives = []
-            phoneme_diagnostics = {"enabled": False}
             if decoder == "greedy":
                 ids = greedy_ids
                 alternatives = [
@@ -179,14 +166,6 @@ class NativeAvsrEngine(AutoAvsrEngine):
                     alternatives.append(
                         {"text": self._text(seq), "raw_score": float(hyp.score), "_token_ids": seq}
                     )
-                if getattr(self, "_phoneme_rescorer", None) is not None:
-                    alternatives, detail = self._phoneme_rescorer.rank(encoded[0], alternatives)
-                    phoneme_diagnostics = dict(
-                        enabled=True,
-                        head_sha256=getattr(self._phoneme_rescorer, "head_sha256", None),
-                        **detail,
-                    )
-                    ids = alternatives[0]["_token_ids"]
                 for alternative in alternatives:
                     alternative.pop("_token_ids", None)
             words = align_words(
@@ -210,7 +189,6 @@ class NativeAvsrEngine(AutoAvsrEngine):
                 "greedy_transcript": self._text(greedy_ids),
                 "context_hint_applied": False,
                 "model_decode_ms": round((time.perf_counter() - started) * 1000),
-                "experimental_phoneme_rescoring": phoneme_diagnostics,
             }
         )
         return EngineResult(

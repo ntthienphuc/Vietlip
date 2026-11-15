@@ -9,7 +9,7 @@ class LipReaderApi {
           dio ??
           Dio(
             BaseOptions(
-              connectTimeout: const Duration(seconds: 10),
+              connectTimeout: const Duration(seconds: 5),
               // A CPU-only server can need several minutes for a long clip,
               // especially while loading the model for the first request.
               sendTimeout: const Duration(minutes: 5),
@@ -36,9 +36,6 @@ class LipReaderApi {
 
   Future<TranscriptionResult> transcribe({
     required String videoPath,
-    required String mode,
-    required bool acceptLlmRisk,
-    String? contextHint,
     void Function(double progress)? onProgress,
     void Function(String status)? onStatus,
   }) async {
@@ -48,10 +45,7 @@ class LipReaderApi {
         filename: 'lip-reading.mp4',
       ),
       'input_kind': 'raw_face',
-      'mode': mode,
-      'accept_llm_risk': acceptLlmRisk.toString(),
-      if (contextHint?.trim().isNotEmpty == true)
-        'context_hint': contextHint!.trim(),
+      'mode': 'visual_only',
     });
 
     try {
@@ -139,7 +133,7 @@ class LipReaderApi {
       }
       if (error.type == DioExceptionType.connectionError ||
           error.type == DioExceptionType.connectionTimeout) {
-        return 'Không kết nối được server. Hãy kiểm tra địa chỉ trong Cài đặt.';
+        return 'Kiểm tra IP, mở VietLip Server và kết nối hai thiết bị cùng Wi-Fi, rồi thử lại.';
       }
       if (error.type == DioExceptionType.sendTimeout) {
         return 'Tải video lên quá lâu. Hãy kiểm tra mạng và thử lại.';
@@ -152,6 +146,6 @@ class LipReaderApi {
       }
     }
     if (error is FormatException) return error.message;
-    return 'Có lỗi ngoài dự kiến. Hãy thử lại hoặc kiểm tra Cài đặt server.';
+    return 'Chưa hoàn tất được thao tác. Hãy thử lại hoặc kiểm tra kết nối máy chủ.';
   }
 }

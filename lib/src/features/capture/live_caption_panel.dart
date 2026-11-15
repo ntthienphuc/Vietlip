@@ -38,6 +38,7 @@ class LiveCaptionPanel extends StatelessWidget {
     this.elapsedMs,
     this.unavailableWindows = 0,
     this.waitingForCaption = false,
+    this.idle = false,
   });
   final String transcript, committed, provisional, status;
   final bool unavailable;
@@ -45,6 +46,7 @@ class LiveCaptionPanel extends StatelessWidget {
   final int? elapsedMs;
   final int unavailableWindows;
   final bool waitingForCaption;
+  final bool idle;
 
   String tail(String text, int count) {
     final words = text.trim().split(RegExp(r'\s+'));
@@ -64,13 +66,6 @@ class LiveCaptionPanel extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.ink.withValues(alpha: .035),
-            blurRadius: 20,
-            offset: const Offset(0, 6),
-          ),
-        ],
         border: Border.all(
           color: unavailable
               ? AppColors.error
@@ -124,7 +119,7 @@ class LiveCaptionPanel extends StatelessWidget {
               status,
               style: TextStyle(
                 color: accent,
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -140,7 +135,9 @@ class LiveCaptionPanel extends StatelessWidget {
                     children: [
                       TextSpan(
                         text: transcript.isEmpty
-                            ? unavailable
+                            ? idle
+                                  ? 'Phụ đề sẽ hiện ở đây.\nBấm “Bắt đầu đọc môi”, rồi nói tự nhiên.'
+                                  : unavailable
                                   ? 'Chưa đủ hình rõ để đọc môi.'
                                   : waitingForCaption
                                   ? 'Đang đọc khẩu hình…'
@@ -159,9 +156,9 @@ class LiveCaptionPanel extends StatelessWidget {
                     ],
                   ),
                   style: TextStyle(
-                    fontSize: 24,
+                    fontSize: idle ? 18 : 24,
                     height: 1.45,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: idle ? FontWeight.w500 : FontWeight.w600,
                     color: unavailable ? AppColors.muted : AppColors.ink,
                   ),
                 ),
@@ -170,14 +167,16 @@ class LiveCaptionPanel extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            unavailable
+            idle
+                ? 'Tự chốt câu khi bạn ngừng nói.'
+                : unavailable
                 ? transcript.isEmpty
                       ? 'Phụ đề sẽ tiếp tục khi hình rõ trở lại.'
                       : 'Phần đã nhận trước đó được giữ lại.'
                 : provisional.isNotEmpty
                 ? 'Chữ gạch dưới đang được cập nhật.'
                 : 'Phụ đề tự động · cần kiểm tra lại.',
-            style: const TextStyle(fontSize: 12, color: AppColors.muted),
+            style: const TextStyle(fontSize: 13, color: AppColors.muted),
           ),
         ],
       ),
@@ -188,8 +187,9 @@ class LiveCaptionPanel extends StatelessWidget {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
       builder: (context) => SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -201,7 +201,9 @@ class LiveCaptionPanel extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               if (captureFps != null)
-                Text('Hình ${captureFps!.toStringAsFixed(0)} fps'),
+                Text(
+                  'Camera: ${captureFps!.toStringAsFixed(0)} khung hình/giây',
+                ),
               if (elapsedMs != null)
                 Text(
                   'Xử lý cửa sổ ${(elapsedMs! / 1000).toStringAsFixed(1)} s',
@@ -234,7 +236,7 @@ class LiveCaptionPanel extends StatelessWidget {
               children: [
                 const Text(
                   'Bản ghi của phiên',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
                 ),
                 const Text(
                   'Phụ đề tự động · cần kiểm tra lại',

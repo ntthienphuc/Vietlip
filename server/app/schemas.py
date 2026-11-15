@@ -20,11 +20,8 @@ class TranscriptionResponse(BaseModel):
     num_frames: int
     created_at: datetime
     alternatives: list[Alternative] = Field(default_factory=list)
-    processing_mode: Literal[
-        "visual_only",
-        "context_select",
-        "llm_assist",
-    ] = "visual_only"
+    processing_mode: Literal["visual_only"] = "visual_only"
+    # Reserved response fields keep older clients able to parse visual results.
     assisted_transcript: Optional[str] = None
     consensus_transcript: Optional[str] = None
     risk_notice: Optional[str] = None
@@ -34,7 +31,7 @@ class TranscriptionResponse(BaseModel):
 class HealthResponse(BaseModel):
     service: str = "lip-reader-api"
     app_name: str = "VietLip"
-    app_version: str = "1.6.3"
+    app_version: str = "1.7.0"
     api_version: str
     status: Literal["ok", "degraded"]
     model_state: str
@@ -44,8 +41,6 @@ class HealthResponse(BaseModel):
     requested_device: str
     precision: str
     model_id: str
-    llm_available: bool = False
-    llm_model: Optional[str] = None
     last_error: Optional[str] = None
     queued_jobs: int = 0
     active_job: bool = False

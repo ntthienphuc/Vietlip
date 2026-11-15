@@ -32,15 +32,10 @@ from .schemas import (
     JobStatus,
     TranscriptionResponse,
 )
-from .services.auto_avsr_engine import AutoAvsrEngine
 from .services.native_engine import NativeAvsrEngine
 from .services.startup import prepare_engine
 from .services.streaming_session import run_stream
 from .services.engine import InferenceEngine
-from .services.llm_postprocessor import (
-    LlmPostprocessor,
-    create_llm_postprocessor,
-)
 from .services.nbest_consensus import summarize_nbest
 from .services.realtime import (
     ContinuousTranscript,
@@ -56,22 +51,15 @@ def create_app(
     *,
     settings: Optional[Settings] = None,
     engine: Optional[InferenceEngine] = None,
-    llm: Optional[LlmPostprocessor] = None,
 ) -> FastAPI:
     config = settings or Settings.from_env()
-    inference_engine = engine or (
-        NativeAvsrEngine(config)
-        if config.model_backend == "native_avsr"
-        else AutoAvsrEngine(config)
-    )
-    llm_processor = llm or create_llm_postprocessor(config)
+    inference_engine = engine or NativeAvsrEngine(config)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         app.state.settings = config
         app.state.engine = inference_engine
         app.state.inference_semaphore = asyncio.Semaphore(1)
-        app.state.llm = llm_processor
         app.state.startup_error = None
         app.state.jobs: dict[str, dict[str, Any]] = {}
         app.state.job_queue = asyncio.Queue(maxsize=config.max_queued_jobs)
@@ -153,10 +141,6 @@ def create_app(
     @app.get("/healthz", response_model=HealthResponse)
     async def healthz() -> HealthResponse:
         current_engine = app.state.engine
-        try:
-            llm_available = await app.state.llm.healthcheck()
-        except Exception:
-            llm_available = False
         return HealthResponse(
             api_version=config.api_version,
             status="degraded"
@@ -169,8 +153,6 @@ def create_app(
             requested_device=config.device,
             precision=current_engine.effective_precision,
             model_id=current_engine.model_id,
-            llm_available=llm_available,
-            llm_model=app.state.llm.model_label,
             last_error=app.state.startup_error or current_engine.last_error,
             queued_jobs=app.state.job_queue.qsize(),
             active_job=any(item.get("status") == "processing" for item in app.state.jobs.values()),
@@ -596,29 +578,6 @@ def create_app(
         if consensus is not None:
             result.diagnostics["nbest_consensus"] = consensus
 
-        llm_result = None
-        if mode != "visual_only":
-            try:
-                llm_result = await app.state.llm.process(
-                    mode=mode,
-                    visual_transcript=result.transcript,
-                    alternatives=result.alternatives,
-                    context_hint=context_hint or "",
-                )
-                result.diagnostics["llm"] = llm_result.diagnostics
-            except Exception as exc:
-                logger.warning(
-                    "LLM post-processing failed for request_id=%s: %s",
-                    resolved_request_id,
-                    type(exc).__name__,
-                )
-                result.diagnostics["llm"] = {
-                    "status": "error",
-                    "message": (
-                        "Không gọi được LLM; bản thuần chuyển động môi vẫn được giữ nguyên."
-                    ),
-                }
-
         return TranscriptionResponse(
             request_id=resolved_request_id,
             transcript=result.transcript,
@@ -628,20 +587,9 @@ def create_app(
             num_frames=result.num_frames,
             created_at=datetime.now(timezone.utc),
             alternatives=result.alternatives,
-            processing_mode=mode,
-            assisted_transcript=(llm_result.assisted_transcript if llm_result else None),
+            processing_mode="visual_only",
             consensus_transcript=(
                 str(consensus["candidate_text"]) if consensus is not None else None
-            ),
-            risk_notice=(
-                "LLM chỉ chọn trong N-best; vẫn có thể chọn sai."
-                if mode == "context_select"
-                else (
-                    "Bản diễn giải từ LLM có thể chứa chi tiết không thể xác nhận "
-                    "chỉ bằng chuyển động môi; hãy đối chiếu với kết quả thị giác."
-                    if mode == "llm_assist"
-                    else None
-                )
             ),
             diagnostics=result.diagnostics,
         )
@@ -652,7 +600,6 @@ def create_app(
         resolved_request_id: str,
         context_hint: Optional[str],
         mode: str,
-        accept_llm_risk: bool,
     ) -> None:
         if context_hint and len(context_hint) > config.max_context_chars:
             raise HTTPException(
@@ -663,35 +610,15 @@ def create_app(
                     "request_id": resolved_request_id,
                 },
             )
-        allowed_modes = {"visual_only", "context_select", "llm_assist"}
-        if mode not in allowed_modes:
+        if mode != "visual_only":
             raise HTTPException(
                 status_code=422,
                 detail={
                     "code": "invalid_mode",
-                    "message": "Chế độ xử lý không được hỗ trợ.",
+                    "message": "VietLip chỉ hỗ trợ đọc môi từ hình ảnh. Hãy cập nhật ứng dụng và thử lại.",
                     "request_id": resolved_request_id,
                 },
             )
-        if mode != "visual_only":
-            if not accept_llm_risk:
-                raise HTTPException(
-                    status_code=422,
-                    detail={
-                        "code": "llm_risk_not_accepted",
-                        "message": ("Vui lòng xác nhận bạn sẽ kiểm tra kết quả hỗ trợ từ LLM."),
-                        "request_id": resolved_request_id,
-                    },
-                )
-            if not context_hint or not context_hint.strip():
-                raise HTTPException(
-                    status_code=422,
-                    detail={
-                        "code": "context_required",
-                        "message": ("Chế độ có LLM cần một chủ đề hoặc ngữ cảnh do bạn nhập."),
-                        "request_id": resolved_request_id,
-                    },
-                )
         if not filename.lower().endswith(".mp4"):
             raise HTTPException(
                 status_code=422,
@@ -714,7 +641,6 @@ def create_app(
         input_kind: str = Form("auto"),
         context_hint: Optional[str] = Form(None),
         mode: str = Form("visual_only"),
-        accept_llm_risk: bool = Form(False),
     ) -> TranscriptionResponse:
         resolved_request_id = (
             request_id.strip()[:128]
@@ -726,7 +652,6 @@ def create_app(
             resolved_request_id=resolved_request_id,
             context_hint=context_hint,
             mode=mode,
-            accept_llm_risk=accept_llm_risk,
         )
 
         temp_path: Path | None = None
@@ -868,7 +793,6 @@ def create_app(
         input_kind: str = Form("auto"),
         context_hint: Optional[str] = Form(None),
         mode: str = Form("visual_only"),
-        accept_llm_risk: bool = Form(False),
     ) -> JobAccepted:
         _cleanup_expired_jobs()
         resolved_request_id = (
@@ -881,7 +805,6 @@ def create_app(
             resolved_request_id=resolved_request_id,
             context_hint=context_hint,
             mode=mode,
-            accept_llm_risk=accept_llm_risk,
         )
         if app.state.job_queue.full():
             raise HTTPException(

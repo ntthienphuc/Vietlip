@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import logging
 from logging.handlers import RotatingFileHandler
-import os
 import queue
 import threading
 import tkinter as tk
@@ -72,9 +71,9 @@ class ServerWindow:
         self.args = args
         self.root = tk.Tk()
         self.root.title(f"{APP_NAME} · {APP_VERSION}")
-        self.root.geometry("760x650")
-        self.root.minsize(700, 610)
-        self.root.configure(bg="#f3f6f6")
+        self.root.geometry("720x740")
+        self.root.minsize(640, 700)
+        self.root.configure(bg="#f4f7f6")
         icon = ROOT.parent / "VietLip.ico"
         if icon.is_file():
             self.root.iconbitmap(str(icon))
@@ -84,6 +83,9 @@ class ServerWindow:
         self.server_thread = None
         self.closing = False
         self.polling = False
+        self.was_ready = False
+        self.missed_health = 0
+        self.logs_visible = False
         self.status = tk.StringVar(value="Đang chuẩn bị máy chủ…")
         self.detail = tk.StringVar(value="Lần đầu có thể cần vài phút để nạp mô hình.")
         self.network_status = tk.StringVar(
@@ -102,82 +104,123 @@ class ServerWindow:
     def _build_ui(self):
         style = ttk.Style()
         style.theme_use("clam")
-        style.configure("TFrame", background="#f3f6f6")
-        style.configure("TLabel", background="#f3f6f6", foreground="#16343c", font=("Segoe UI", 10))
+        style.configure("TFrame", background="#f4f7f6")
+        style.configure("TLabel", background="#f4f7f6", foreground="#16343c", font=("Segoe UI", 10))
+        style.configure("Muted.TLabel", foreground="#546866")
         style.configure("Card.TFrame", background="white")
-        style.configure("Card.TLabel", background="white")
-        style.configure("Title.TLabel", font=("Segoe UI", 25, "bold"))
+        style.configure("Card.TLabel", background="white", foreground="#546866")
+        style.configure("Title.TLabel", font=("Segoe UI", 26, "bold"))
         style.configure(
-            "Status.TLabel", background="white", foreground="#0c756e", font=("Segoe UI", 17, "bold")
+            "Status.TLabel", background="white", foreground="#0c756e", font=("Segoe UI", 18, "bold")
         )
-        style.configure("TButton", font=("Segoe UI", 10), padding=(12, 9))
-        style.configure("Accent.TButton", background="#0c756e", foreground="white")
-        style.map("Accent.TButton", background=[("active", "#105f5a")])
-        panel = ttk.Frame(self.root, padding=24)
+        style.configure("TButton", font=("Segoe UI", 10), padding=(14, 10))
+        style.configure("Accent.TButton", background="#0c756e", foreground="white", borderwidth=0)
+        style.map("Accent.TButton", background=[("active", "#095e59"), ("pressed", "#084f4b")])
+        style.configure("TCombobox", padding=10, fieldbackground="white", foreground="#16343c")
+        panel = ttk.Frame(self.root, padding=28)
         panel.pack(fill="both", expand=True)
-        ttk.Label(panel, text="VietLip", style="Title.TLabel").pack(anchor="w")
-        ttk.Label(panel, text="Máy chủ đọc môi tiếng Việt  /  " + APP_VERSION).pack(anchor="w")
+        footer = ttk.Frame(panel)
+        footer.pack(side="bottom", fill="x", pady=(20, 0))
+        ttk.Label(
+            footer, text="Chỉ dùng hình ảnh\nPhụ đề tự động cần kiểm tra", style="Muted.TLabel"
+        ).pack(side="left")
+        ttk.Button(footer, text="Đóng máy chủ", command=self.close).pack(side="right")
+        self.footer = footer
+
+        header = ttk.Frame(panel)
+        header.pack(fill="x")
+        ttk.Label(header, text="VietLip", style="Title.TLabel").pack(side="left")
+        ttk.Label(header, text=APP_VERSION, style="Muted.TLabel").pack(
+            side="right", anchor="s", pady=8
+        )
+        ttk.Label(panel, text="Máy chủ đọc môi tiếng Việt", style="Muted.TLabel").pack(
+            anchor="w", pady=(2, 0)
+        )
         card = ttk.Frame(panel, style="Card.TFrame", padding=20)
-        card.pack(fill="x", pady=(20, 16))
-        ttk.Label(card, textvariable=self.status, style="Status.TLabel", wraplength=620).pack(
-            anchor="w"
+        card.pack(fill="x", pady=(24, 24))
+        self.status_label = ttk.Label(
+            card, textvariable=self.status, style="Status.TLabel", wraplength=600
         )
-        ttk.Label(card, textvariable=self.detail, style="Card.TLabel", wraplength=620).pack(
-            anchor="w", pady=(8, 0)
+        self.status_label.pack(anchor="w")
+        detail_label = ttk.Label(
+            card, textvariable=self.detail, style="Card.TLabel", wraplength=600
         )
-        ttk.Label(panel, text="01  Nhập địa chỉ này trong app", font=("Segoe UI", 11, "bold")).pack(
-            anchor="w"
-        )
-        lan_row = ttk.Frame(panel)
-        lan_row.pack(fill="x", pady=(12, 8))
+        detail_label.pack(anchor="w", pady=(8, 0))
+        ttk.Label(panel, text="Kết nối điện thoại", font=("Segoe UI", 13, "bold")).pack(anchor="w")
+        ttk.Label(
+            panel, text="Nhập địa chỉ này trong Cài đặt của ứng dụng.", style="Muted.TLabel"
+        ).pack(anchor="w", pady=(5, 12))
         self.address_box = ttk.Combobox(
-            lan_row,
+            panel,
             textvariable=self.lan,
             values=self.addresses,
             state="readonly",
-            width=32,
-            font=("Segoe UI", 13),
+            font=("Segoe UI", 17),
+            width=22,
         )
-        self.address_box.pack(side="left", fill="x", expand=True)
+        self.address_box.pack(fill="x")
+        lan_actions = ttk.Frame(panel)
+        lan_actions.pack(fill="x", pady=(12, 8))
         ttk.Button(
-            lan_row,
-            text="Sao chép IP",
+            lan_actions,
+            text="Sao chép địa chỉ",
             style="Accent.TButton",
             command=lambda: self.copy(self.lan.get()),
-        ).pack(side="left", padx=8)
-        ttk.Button(lan_row, text="Làm mới", command=self.refresh_addresses).pack(side="left")
-        ttk.Label(panel, textvariable=self.network_status, wraplength=660).pack(
-            anchor="w", pady=(3, 14)
+        ).pack(side="left")
+        ttk.Button(lan_actions, text="Làm mới IP", command=self.refresh_addresses).pack(
+            side="left", padx=(10, 0)
         )
+        network_label = ttk.Label(
+            panel, textvariable=self.network_status, style="Muted.TLabel", wraplength=640
+        )
+        network_label.pack(anchor="w", pady=(4, 20))
         ttk.Label(
-            panel, text="02  Mở VietLip → Cài đặt → Lưu và kiểm tra", font=("Segoe UI", 11, "bold")
+            panel, text="Trong app: Cài đặt → Lưu và kiểm tra", font=("Segoe UI", 11, "bold")
         ).pack(anchor="w")
-        ttk.Label(
-            panel, text="Sau đó bấm Bắt đầu live. Giữ cửa sổ này mở trong phiên.", wraplength=660
-        ).pack(anchor="w", pady=(5, 12))
-        self.log_box = scrolledtext.ScrolledText(
+        hint = ttk.Label(
             panel,
+            text="Sau đó bấm Bắt đầu đọc môi. Giữ máy chủ mở trong phiên.",
+            style="Muted.TLabel",
+            wraplength=640,
+        )
+        hint.pack(anchor="w", pady=(6, 16))
+        self.log_toggle = ttk.Button(panel, text="Xem nhật ký", command=self.toggle_logs)
+        self.log_toggle.pack(anchor="w")
+        self.log_container = ttk.Frame(panel)
+        self.log_box = scrolledtext.ScrolledText(
+            self.log_container,
             height=5,
             state="disabled",
             font=("Consolas", 9),
             wrap="word",
             relief="flat",
-            background="#e9efef",
+            background="#e9efed",
             foreground="#30494f",
             borderwidth=0,
-            padx=10,
-            pady=8,
+            padx=12,
+            pady=10,
         )
         self.log_box.pack(fill="both", expand=True)
-        actions = ttk.Frame(panel)
-        actions.pack(fill="x", pady=(14, 0))
-        ttk.Button(actions, text="Mở nhật ký", command=lambda: os.startfile(data_dir())).pack(
-            side="left"
-        )
-        ttk.Label(
-            actions, text="Chỉ dùng hình ảnh · phụ đề cần kiểm tra", font=("Segoe UI", 9)
-        ).pack(side="left", padx=12)
-        ttk.Button(actions, text="Đóng máy chủ", command=self.close).pack(side="right")
+
+        def resize(event):
+            width = max(250, event.width - 40)
+            self.status_label.configure(wraplength=width)
+            detail_label.configure(wraplength=width)
+            network_label.configure(wraplength=width + 40)
+            hint.configure(wraplength=width + 40)
+
+        panel.bind("<Configure>", resize)
+
+    def toggle_logs(self):
+        self.logs_visible = not self.logs_visible
+        if self.logs_visible:
+            self.log_container.pack(fill="both", expand=True, pady=(12, 0))
+            self.log_toggle.configure(text="Ẩn nhật ký")
+            if self.root.winfo_height() < 780:
+                self.root.geometry(f"{self.root.winfo_width()}x780")
+        else:
+            self.log_container.pack_forget()
+            self.log_toggle.configure(text="Xem nhật ký")
 
     def start(self):
         def worker():
@@ -216,20 +259,24 @@ class ServerWindow:
         self.root.after(1500, self.poll)
 
     def show_health(self, health):
+        self.missed_health = 0
+        self.status_label.configure(foreground="#0c756e")
         if health.get("app_version") != APP_VERSION:
             self.status.set("Đang có một server phiên bản khác")
             self.detail.set(
                 "Đóng server cũ rồi mở lại VietLip để dùng bản đã cài. Cửa sổ này không dừng server đó."
             )
         elif health.get("realtime_available") and health.get("model_state") == "ready":
+            self.was_ready = True
             self.status.set("Sẵn sàng đọc môi")
             device = (
                 "GPU NVIDIA"
                 if str(health.get("device", "")).startswith("cuda")
                 else "CPU · sẽ chậm hơn GPU"
             )
-            self.detail.set(f"{device}  ·  Mô hình đã nạp  ·  Tự nhận khoảng ngừng nói")
+            self.detail.set(f"{device}. Tự nhận khoảng ngừng nói để chốt phụ đề.")
         elif health.get("last_error"):
+            self.status_label.configure(foreground="#c2413b")
             self.status.set("Chưa thể đọc môi")
             self.detail.set(health["last_error"])
         else:
@@ -252,7 +299,16 @@ class ServerWindow:
                 self.polling = False
                 if value:
                     self.show_health(value)
+                elif self.was_ready:
+                    self.missed_health += 1
+                    if self.missed_health >= 3:
+                        self.status_label.configure(foreground="#c2413b")
+                        self.status.set("Máy chủ chưa phản hồi")
+                        self.detail.set(
+                            "Chờ một chút. Nếu trạng thái không đổi, đóng và mở lại VietLip Server."
+                        )
             elif kind == "error":
+                self.status_label.configure(foreground="#c2413b")
                 self.status.set("Không khởi động được máy chủ")
                 self.detail.set(value)
             elif kind == "stopped" and not self.closing:

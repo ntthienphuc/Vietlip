@@ -46,6 +46,7 @@ def copy_tree(source, target, excludes=()):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--checkpoint", type=Path, help="Explicit SO17 source when developer model cache was removed")
     args = parser.parse_args()
     output = args.output.resolve()
     if output.exists():
@@ -54,7 +55,7 @@ def main():
         raise RuntimeError("Use server/.venv/Scripts/python.exe (Python 3.11)")
     base = Path(sys.base_prefix)
     packages = Path(sys.prefix) / "Lib/site-packages"
-    model = REPO / "server/models/SO_seed17.pt"
+    model = args.checkpoint or REPO / "server/models/SO_seed17.pt"
     expected = "cddfb8c79f1db9d66695c0b1b7e2d98837187c600668a8aee3ccdd5b58981ecc"
     if sha256(model) != expected:
         raise ValueError("Selected checkpoint checksum mismatch")
@@ -94,7 +95,7 @@ def main():
     entries = [{"path": str(path.relative_to(output)).replace("\\", "/"),
                 "bytes": path.stat().st_size, "sha256": sha256(path)}
                for path in sorted(output.rglob("*")) if path.is_file()]
-    manifest = {"app": "VietLip Server", "version": "1.6.3", "created": time.time(),
+    manifest = {"app": "VietLip Server", "version": "1.7.0", "created": time.time(),
                 "files": entries, "total_bytes": sum(item["bytes"] for item in entries)}
     (output / "PAYLOAD_MANIFEST.json").write_text(json.dumps(manifest, indent=2), encoding="utf8")
     print(json.dumps({"files": len(entries), "bytes": manifest["total_bytes"],
