@@ -81,7 +81,7 @@ server đã cài không sai hash; runtime CUDA/tokenizer/MediaPipe kiểm tra th
 APK Android 1.9.0+18 trên SM-G965F khớp SHA-256 với file bàn giao. Hai phương
 pháp gateway đã chạy thành công bằng chính module production được cài trên PC.
 
-Phê duyệt tự động chặn lệnh mở server từ agent, không cung cấp lý do chi tiết.
-Sau khi cài, server đang dừng và cần người dùng mở shortcut. Chưa xác nhận lại
-luồng AI app → Wi-Fi → server trên thiết bị sau nâng cấp; không coi các test
-module/UI là phép đo live hoặc phép đo chính xác mới.
+Sau khi người dùng mở server, đã kiểm tra hai luồng AI app → Wi-Fi → server
+trên cùng video có sẵn, mở lại hai bản từ Lịch sử và trả cấu hình về Trực tiếp.
+Server vẫn ready/CUDA. Xem [biên bản Wi-Fi trên thiết bị](WIFI_METHODS_1_9_2026-11-15.md)
+để phân biệt kiểm tra luồng full-clip với đo độ trễ ngừng nói/độ chính xác.
