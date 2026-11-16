@@ -6,9 +6,18 @@ CUDA Toolkit, Flutter, a cloud account or an API key. A compatible NVIDIA driver
 is needed to use CUDA; CPU remains the fallback.
 
 `build_installer.ps1` creates a new stage using `stage_bundle.py`, validates its
-hashes and imports, then compiles `VietLipServer.iss`. Install the resulting EXE
-with every generated BIN beside it. The full recipe is in
+hashes and imports, then compiles `VietLipServer.iss`. The resulting EXE contains
+the complete payload; no external BIN or ZIP is required. The full recipe is in
 [`docs/PROJECT_MAP.md`](../../docs/PROJECT_MAP.md).
+
+Inno's EXE and internal BIN slices are embedded by `package_installer.py` in a
+small .NET Framework bootstrapper, compiled with the Windows-provided C# compiler.
+The final EXE validates SHA-256 for the archive and each allowlisted member,
+extracts into a unique user-owned temporary directory, runs Inno and removes
+that directory on exit. Installer switches such as `/VERYSILENT` and `/LOG=...`
+are forwarded. `--verify` checks the complete embedded payload without installing.
+Temporary extraction needs about 3.5 GB in addition to the installed payload.
+Internal slices/staging are build artifacts and are not distributed to users.
 
 The stage intentionally includes only the selected model and runtime source.
 It excludes signing credentials, recordings and experimental checkpoints.

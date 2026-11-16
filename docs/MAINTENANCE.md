@@ -18,25 +18,33 @@ Một cảnh báo deprecation từ thư viện Starlette vẫn còn. Dart đã �
 
 ## Bộ cài gồm hai file
 
-Bộ mới nhất: `output/VietLip-1.9.0`.
+Bộ cuối hiện tại: `output/VietLip-Final`, phiên bản 1.10.1.
 
-- `VietLip-1.9.0.apk`: cài cập nhật Android, giữ lịch sử.
-- `VietLip-Windows-1.9.0.zip`: giải nén toàn bộ, đọc `BAT_DAU.txt`, chạy EXE
-  trong `02-Server-Windows`, giữ các BIN cạnh EXE.
+- `VietLip-1.10.1.apk`: cài cập nhật Android, giữ lịch sử.
+- `VietLip-Server-Setup-1.10.1.exe`: chạy trực tiếp trên Windows x64; đã chứa
+  Python, thư viện CPU/CUDA và checkpoint SO17, không cần ZIP hoặc BIN bên cạnh.
 
-Bản trong Downloads là bản trước. Thư mục 1.9.0 chỉ có hai file phân phối;
-biên nhận, source và bằng chứng kiểm thử nằm trong project. Xem
-`READING_METHODS_1_9.md` để biết cách chọn và cấu hình AI sau phiên.
+Thư mục phân phối chỉ có hai file; biên nhận, source và bằng chứng kiểm thử nằm
+trong project. Mặc định Trực tiếp; AI khôi phục từng câu qua Groq/OpenRouter vẫn
+là lựa chọn trong Cài đặt. Xem `LIVE_AI_1_10.md`.
 
-Tạo lại gói phân phối từ bộ cài đã có manifest:
+Tạo lại EXE từ stage đã có manifest:
 
 ```powershell
-python tools/package_delivery.py --kit C:\VietLip-release `
-  --output C:\VietLip-two-files --receipt C:\VietLip-delivery-receipt.json
+.\packaging\windows_server\build_installer.ps1 -SkipStage `
+  -StageDirectory C:\VietLip-stage -OutputDirectory C:\VietLip-final
 ```
 
-Lệnh từ chối thư mục đầu ra đã tồn tại, kiểm mọi hash nguồn, rồi đọc lại và kiểm
-hash mọi nội dung ZIP. Gói nguồn và bộ cài được giữ nguyên trong lúc đóng gói.
+Builder kiểm toàn bộ hash payload và runtime trước khi nén một EXE. Đặt APK có
+ký từ `build_android.ps1` cạnh EXE. `tools/package_delivery.py` chỉ còn phục vụ
+các bộ kit ZIP lịch sử, không thuộc cách phân phối cuối hiện tại.
+EXE tự giải nén cần khoảng 3,5 GB trống ở ổ tạm, ngoài khoảng 6 GB cho bản đã cài.
+Tham số `--verify` kiểm tra toàn bộ dữ liệu nhúng mà không cài đặt. Phần bootstrap
+có sáu kiểm thử tích hợp Windows trong `packaging/windows_server/tests`.
+
+Trước khi dọn staging/bộ cài cũ, phải cài thử chính EXE, kiểm lại manifest trong
+thư mục cài, server health và kết nối Wi-Fi từ điện thoại. Ghi hash hai file cuối,
+biên nhận cài đặt và dung lượng trống C/E trước/sau trong artifact của đợt phát hành.
 
 ## Tái tạo và lưu trữ
 

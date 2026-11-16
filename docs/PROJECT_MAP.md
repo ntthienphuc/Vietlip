@@ -1,8 +1,8 @@
 # VietLip — sơ đồ project
 
 Mã ứng dụng đang bảo trì: `E:\Project\Lip_App\lip_reader`.
-Bộ cài mới nhất: `output/VietLip-1.10.1` (APK + ZIP Windows).
-Các bộ cài trong Downloads hoặc thư mục phiên bản cũ được giữ để đối chiếu/khôi phục.
+Bộ cài mới nhất: `output/VietLip-Final` (APK + EXE Windows tự chứa đầy đủ).
+Các bản phân phối cũ được dọn sau khi kiểm chứng bản cuối; giữ biên nhận kiểm thử.
 Recipe đóng gói và kiểm tra: [MAINTENANCE.md](MAINTENANCE.md).
 
 | Thư mục | Dùng để làm gì |
@@ -15,7 +15,7 @@ Recipe đóng gói và kiểm tra: [MAINTENANCE.md](MAINTENANCE.md).
 | `test`, `server/tests` | Các kiểm thử ứng dụng và server |
 | `tools` | Công cụ build, ký và kiểm tra thiết bị dành cho người phát triển |
 | `docs` | Hướng dẫn, báo cáo phiên bản và quyết định chọn mô hình |
-| `output/archive` | Các APK/bộ cài/báo cáo xuất trước VietLip 1.6.0 |
+| `output/VietLip-Final` | Hai file phân phối cuối: APK Android và EXE Windows |
 | `artifacts` | Video và bằng chứng thử nghiệm cục bộ, không đưa vào Git/bộ cài |
 | `research`, `server/experiments` | Thử nghiệm trước đây, không thuộc bộ cài cho người dùng |
 | `packaging/legacy_windows_server_1_1` | Script bộ cài 1.1 cũ, chỉ giữ để tra cứu |
@@ -34,6 +34,8 @@ SO17 đã chọn; không mang các video cá nhân hoặc checkpoint thử nghi�
 ```
 
 Stage phải là thư mục mới. Builder kiểm hash, thử import bằng Python đi kèm,
-rồi tạo Setup.exe và các file dữ liệu .bin. Cần giữ chúng trong cùng thư mục.
-Sau build cần cài thử vào đường dẫn khác và kiểm lại API/live; build thành công
+rồi tạo một Setup.exe chứa đầy đủ runtime và model, không cần file .bin ngoài.
+Nếu môi trường phát triển đã dọn, builder dùng runtime và checkpoint của
+VietLip Server đang cài; checkpoint vẫn phải khớp SHA-256 đã khóa.
+Sau build cần cài thử và kiểm lại payload/API/điện thoại; build thành công
 chưa chứng minh luồng cài đặt và nhận dạng hoạt động.

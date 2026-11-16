@@ -5,8 +5,11 @@ Windows trong cùng mạng nội bộ. Server hiển thị IP; người dùng nh
 **Cài đặt → Lưu và kiểm tra**. Phụ đề live chỉ dùng hình ảnh. Video lưu có âm
 thanh để đối chiếu khi thử nghiệm.
 
-**Bộ cài hiện tại:** `output/VietLip-1.10.1` — gồm đúng hai file:
-APK Android 1.10.1 và ZIP Windows 1.10.1. Giải nén toàn bộ ZIP, rồi mở `BAT_DAU.txt`.
+**Bộ cài hiện tại:** `output/VietLip-Final` — gồm đúng hai file:
+`VietLip-1.10.1.apk` và `VietLip-Server-Setup-1.10.1.exe`. EXE chứa đầy đủ
+runtime và mô hình; mở trực tiếp để cài, không cần ZIP hoặc BIN đi kèm.
+Cần khoảng 6 GB cho bản Windows đã cài và thêm khoảng 3,5 GB trống ở ổ chứa
+thư mục tạm khi mở EXE; dữ liệu giải nén tạm được dọn khi đóng bộ cài.
 
 Mặc định **Trực tiếp — SO17** để ưu tiên live. Trong Cài đặt có thêm các phương pháp
 Khôi phục câu qua Groq hoặc OpenRouter ngay trong phiên, theo từng câu. Bản AI nằm riêng; phụ đề
@@ -15,8 +18,8 @@ Xem [cách dùng và cấu hình](docs/LIVE_AI_1_10.md).
 
 ## Dùng bộ cài
 
-1. Chạy `02-Server-Windows/VietLip-Server-Setup-1.10.1.exe`; giữ các file `.bin`
-   bên cạnh. Bộ cài có sẵn Python, thư viện CPU/CUDA và checkpoint SO17.
+1. Chạy `VietLip-Server-Setup-1.10.1.exe`. Bộ cài có sẵn Python, thư viện
+   CPU/CUDA và checkpoint SO17.
 2. Mở **VietLip Server** từ Start Menu và chờ **Sẵn sàng đọc môi**.
 3. Cài `VietLip-1.10.1.apk` đi kèm riêng lên Android. Cập nhật trực tiếp để giữ
    lịch sử trên thiết bị.
@@ -75,6 +78,7 @@ và bộ cài hiện tại. Đây là điểm chốt của đợt tối ưu vớ
 
 ## Bảo trì
 
+- [Bộ cài cuối, cài sạch, kiểm điện thoại và biên nhận dọn máy](docs/FINAL_DELIVERY_2026-11-16.md).
 - [Kiểm tra code, gói hai file và quy tắc lưu trữ](docs/MAINTENANCE.md).
 - [UI/UX 1.8.0 và kiểm chứng trên điện thoại](UI_UX_POLISH_REPORT.md).
 - [AI theo từng câu và kiểm chứng 1.10.1](docs/RELEASE_1_10_2026-11-16.md).
@@ -94,9 +98,9 @@ Chạy từ source đã chuẩn bị: `server/run_realtime.ps1`. Build Android c
 `packaging/windows_server/README.md`. Không đưa model, khóa ký, video hay thư
 mục build vào Git. Mã nguồn của bên thứ ba và license được giữ cùng project.
 
-Các bản xuất cũ chuyển vào `output/archive/pre_vietlip_1_6`; script bộ cài cũ
-chuyển vào `packaging/legacy_windows_server_1_1`. Video, bằng chứng, model và
-thử nghiệm cũ được giữ để đối chiếu; chúng không nằm trong bộ cài người dùng.
+Các bộ cài cũ và cache build được dọn sau khi kiểm chứng bản cuối. Video,
+bằng chứng, model và thử nghiệm được giữ để đối chiếu; chúng không nằm trong
+bộ cài người dùng. Script bộ cài 1.1 cũ ở `packaging/legacy_windows_server_1_1`.
 
 ## UI/UX 1.7.0
 

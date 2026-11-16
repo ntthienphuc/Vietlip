@@ -22,6 +22,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 WizardStyle=modern
 Compression=lzma2/fast
 SolidCompression=yes
+; Internal payload slices are embedded by package_installer.py in one final EXE.
 DiskSpanning=yes
 DiskSliceSize=2000000000
 CloseApplications=yes
