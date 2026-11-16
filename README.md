@@ -56,6 +56,9 @@ Bốn lượt camera Wi-Fi ngày 16/11, cùng người nói và cùng 10 câu m�
 WER gộp 47,5% ở bản gốc, 48,0% với Groq và 43,5% với OpenRouter. Đây là mẫu
 nhỏ, chưa đại diện cho người nói/câu tự do; LLM vẫn có thể sửa sai ý.
 Xem [phạm vi và kết quả kiểm chứng 1.10](docs/RELEASE_1_10_2026-11-16.md).
+Vòng tám phiên đoạn văn tiếp theo có WER ước lượng theo chép âm thanh cục bộ
+57,88% ở bản gốc và 61,41% với Groq. Người dùng có vấp/đổi từ nên nhãn ASR này
+chưa phải tham chiếu kiểm nghe hoàn chỉnh. [Báo cáo và quyết định giữ cấu hình](docs/PARAGRAPH_BENCHMARK_2026-11-16.md).
 Đóng gói và đổi UI không phải cải thiện độ chính xác. GPU được ưu tiên; CPU chạy được nhưng
 không bảo đảm realtime. Android đã được build/test; chưa kiểm chứng iPhone.
 
@@ -75,6 +78,7 @@ và bộ cài hiện tại. Đây là điểm chốt của đợt tối ưu vớ
 - [Kiểm tra code, gói hai file và quy tắc lưu trữ](docs/MAINTENANCE.md).
 - [UI/UX 1.8.0 và kiểm chứng trên điện thoại](UI_UX_POLISH_REPORT.md).
 - [AI theo từng câu và kiểm chứng 1.10.1](docs/RELEASE_1_10_2026-11-16.md).
+- [Tám phiên đoạn văn: so cửa sổ, ngắt đoạn và LLM](docs/PARAGRAPH_BENCHMARK_2026-11-16.md).
 - [Thử sửa transcript bằng LLM lớn: kết quả và giới hạn](docs/LLM_REWRITE_2026-11-15.md).
 - [Kiểm dữ liệu local, ba mô hình thị giác và phép thử LLM mở rộng](docs/LLM_EXPANSION_2026-11-15.md).
 - [Sơ đồ thư mục và cách tạo bộ cài](docs/PROJECT_MAP.md).
