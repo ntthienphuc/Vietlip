@@ -8,13 +8,13 @@ import os
 from pathlib import Path
 import time
 from typing import Literal
-import urllib.error
 import urllib.parse
-import urllib.request
 
 from fastapi import APIRouter
+import httpx
 from pydantic import BaseModel, ConfigDict, Field
 from .live_trace import LiveTrace
+from ..version import APP_VERSION
 
 Method = Literal["visual", "recovery"]
 Provider = Literal["groq", "openrouter"]
@@ -162,8 +162,22 @@ class TranscriptRewriter:
         self._active += 1
 
         async def run():
+            started = time.monotonic()
             try:
-                result = await asyncio.to_thread(self._request, request, provider)
+                try:
+                    # A socket read timeout resets when a provider sends a keepalive.
+                    # Bound the whole async HTTP operation and cancel its transport.
+                    result = await asyncio.wait_for(
+                        self._request(request, provider), timeout=self.timeout
+                    )
+                except TimeoutError:
+                    result = RewriteResponse(
+                        **base,
+                        status="unavailable",
+                        code="timeout",
+                        message="AI phản hồi chậm. Câu gốc đã được giữ lại.",
+                        elapsed_ms=round((time.monotonic() - started) * 1000),
+                    )
                 self._trace.record(
                     dict(type="ai_rewrite", source_text=request.text, **result.model_dump())
                 )
@@ -189,7 +203,7 @@ class TranscriptRewriter:
             return str(values.get(provider.get("api_key_name", ""), ""))
         return provider.get("api_key") or os.getenv(provider.get("api_key_env", ""), "")
 
-    def _request(self, request: RewriteRequest, provider: dict) -> RewriteResponse:
+    async def _request(self, request: RewriteRequest, provider: dict) -> RewriteResponse:
         start = time.monotonic()
         base = dict(
             method=request.method,
@@ -224,20 +238,20 @@ class TranscriptRewriter:
                     "allow_fallbacks": False,
                     "max_price": {"prompt": 0, "completion": 0},
                 }
-            headers = {"Content-Type": "application/json", "User-Agent": "VietLip/1.10"}
+            headers = {"Content-Type": "application/json", "User-Agent": f"VietLip/{APP_VERSION}"}
             key = self._key(provider)
             if key:
                 headers["Authorization"] = "Bearer " + key
-            http_request = urllib.request.Request(
-                provider["endpoint"],
-                data=json.dumps(payload, ensure_ascii=False).encode(),
-                headers=headers,
-            )
-            opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-            with opener.open(http_request, timeout=self.timeout) as response:
-                response_bytes = response.read(256 * 1024 + 1)
-                if len(response_bytes) > 256 * 1024:
-                    raise ValueError("oversized response")
+            async with httpx.AsyncClient(timeout=self.timeout, trust_env=False) as client:
+                async with client.stream(
+                    "POST", provider["endpoint"], headers=headers, json=payload
+                ) as response:
+                    response.raise_for_status()
+                    response_bytes = bytearray()
+                    async for chunk in response.aiter_bytes():
+                        response_bytes.extend(chunk)
+                        if len(response_bytes) > 256 * 1024:
+                            raise ValueError("oversized response")
                 result = json.loads(response_bytes)
             choice = result["choices"][0]
             text = choice["message"]["content"]
@@ -255,20 +269,20 @@ class TranscriptRewriter:
                 model_id=str(result.get("model") or provider["model"]),
                 elapsed_ms=round((time.monotonic() - start) * 1000),
             )
-        except urllib.error.HTTPError as error:
-            if error.code == 429:
+        except httpx.HTTPStatusError as error:
+            if error.response.status_code == 429:
                 code, message = (
                     "rate_limited",
                     "AI đã chạm hạn mức. Câu gốc vẫn hiển thị; hãy thử lại sau.",
                 )
-            elif error.code in (401, 403):
+            elif error.response.status_code in (401, 403):
                 code, message = (
                     "access_denied",
                     "Dịch vụ AI từ chối truy cập. Kiểm tra key và quyền model trên PC.",
                 )
-        except TimeoutError:
+        except (TimeoutError, httpx.TimeoutException):
             code, message = "timeout", "AI phản hồi chậm. Câu gốc đã được giữ lại."
-        except (OSError, ValueError, TypeError, KeyError, IndexError):
+        except (httpx.RequestError, OSError, ValueError, TypeError, KeyError, IndexError):
             pass
         return RewriteResponse(
             **base,

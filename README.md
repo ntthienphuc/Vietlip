@@ -1,12 +1,12 @@
-# VietLip 1.10.0
+# VietLip 1.10.1
 
 Ứng dụng Android đọc môi tiếng Việt qua camera, kết nối không dây tới server
 Windows trong cùng mạng nội bộ. Server hiển thị IP; người dùng nhập IP trong
 **Cài đặt → Lưu và kiểm tra**. Phụ đề live chỉ dùng hình ảnh. Video lưu có âm
 thanh để đối chiếu khi thử nghiệm.
 
-**Bộ cài hiện tại:** `output/VietLip-1.10.0` — gồm đúng hai file:
-APK Android 1.10.0 và ZIP Windows 1.10.0. Giải nén toàn bộ ZIP, rồi mở `BAT_DAU.txt`.
+**Bộ cài hiện tại:** `output/VietLip-1.10.1` — gồm đúng hai file:
+APK Android 1.10.1 và ZIP Windows 1.10.1. Giải nén toàn bộ ZIP, rồi mở `BAT_DAU.txt`.
 
 Mặc định **Trực tiếp — SO17** để ưu tiên live. Trong Cài đặt có thêm các phương pháp
 Khôi phục câu qua Groq hoặc OpenRouter ngay trong phiên, theo từng câu. Bản AI nằm riêng; phụ đề
@@ -15,10 +15,10 @@ Xem [cách dùng và cấu hình](docs/LIVE_AI_1_10.md).
 
 ## Dùng bộ cài
 
-1. Chạy `02-Server-Windows/VietLip-Server-Setup-1.10.0.exe`; giữ các file `.bin`
+1. Chạy `02-Server-Windows/VietLip-Server-Setup-1.10.1.exe`; giữ các file `.bin`
    bên cạnh. Bộ cài có sẵn Python, thư viện CPU/CUDA và checkpoint SO17.
 2. Mở **VietLip Server** từ Start Menu và chờ **Sẵn sàng đọc môi**.
-3. Cài `VietLip-1.10.0.apk` đi kèm riêng lên Android. Cập nhật trực tiếp để giữ
+3. Cài `VietLip-1.10.1.apk` đi kèm riêng lên Android. Cập nhật trực tiếp để giữ
    lịch sử trên thiết bị.
 4. PC và điện thoại kết nối cùng mạng Wi-Fi/LAN có cho phép liên lạc giữa
    thiết bị. Nhập IP server trong app, kiểm tra, rồi **Bắt đầu đọc môi**.
@@ -52,8 +52,8 @@ Giữ **SO17 native, float32, beam 3 / CTC 0.1, 25 fps, cửa sổ 6 giây và b
 Các tài liệu thử nghiệm cũ được giữ để đối chiếu.
 
 Ứng dụng vẫn là bản thử nghiệm, **chưa đạt độ chính xác cao với câu nói tự do**.
-Hai lượt camera Wi-Fi ngày 16/11, cùng người nói và cùng 10 câu mỗi lượt, có
-WER gộp 44,5% ở bản gốc, 43,5% với Groq và 39,5% với OpenRouter. Đây là mẫu
+Bốn lượt camera Wi-Fi ngày 16/11, cùng người nói và cùng 10 câu mỗi lượt, có
+WER gộp 47,5% ở bản gốc, 48,0% với Groq và 43,5% với OpenRouter. Đây là mẫu
 nhỏ, chưa đại diện cho người nói/câu tự do; LLM vẫn có thể sửa sai ý.
 Xem [phạm vi và kết quả kiểm chứng 1.10](docs/RELEASE_1_10_2026-11-16.md).
 Đóng gói và đổi UI không phải cải thiện độ chính xác. GPU được ưu tiên; CPU chạy được nhưng
@@ -74,7 +74,7 @@ và bộ cài hiện tại. Đây là điểm chốt của đợt tối ưu vớ
 
 - [Kiểm tra code, gói hai file và quy tắc lưu trữ](docs/MAINTENANCE.md).
 - [UI/UX 1.8.0 và kiểm chứng trên điện thoại](UI_UX_POLISH_REPORT.md).
-- [AI theo từng câu và kiểm chứng 1.10.0](docs/RELEASE_1_10_2026-11-16.md).
+- [AI theo từng câu và kiểm chứng 1.10.1](docs/RELEASE_1_10_2026-11-16.md).
 - [Thử sửa transcript bằng LLM lớn: kết quả và giới hạn](docs/LLM_REWRITE_2026-11-15.md).
 - [Kiểm dữ liệu local, ba mô hình thị giác và phép thử LLM mở rộng](docs/LLM_EXPANSION_2026-11-15.md).
 - [Sơ đồ thư mục và cách tạo bộ cài](docs/PROJECT_MAP.md).

@@ -52,6 +52,9 @@ Discovery chỉ trả tên model và trạng thái, không trả key hoặc đư
 
 Client giới hạn hai lượt đang xử lý, sáu lượt đang chờ; timeout có thời hạn.
 Server giới hạn hai lượt AI đồng thời, tách khỏi semaphore mô hình thị giác.
+Từ bản 1.10.1, hạn chờ 12 giây áp dụng cho toàn lượt HTTP bất đồng bộ, kể cả
+khi API gửi keepalive liên tục. Hết hạn hủy kết nối, giải phóng lượt đang chạy,
+giữ bản gốc và lưu trạng thái timeout; phản hồi muộn không đổi lại câu đã chốt.
 Cùng mã câu/nội dung/provider được gộp trong bộ nhớ server tối đa năm phút;
 đổi nội dung với cùng mã bị từ chối. Cache tối đa 128 mục đã hoàn thành.
 Lịch sử ghi tuần tự và chỉ cập nhật bản còn tồn tại, không phục hồi phiên đã xóa.

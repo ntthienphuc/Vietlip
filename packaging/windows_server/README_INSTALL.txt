@@ -1,10 +1,10 @@
-VIETLIP SERVER 1.10.0 — ĐỌC MÔI TIẾNG VIỆT
+VIETLIP SERVER 1.10.1 — ĐỌC MÔI TIẾNG VIỆT
 
 1. Cài VietLip Server bằng file Setup.exe. Giữ tất cả file .bin cạnh Setup.exe.
    Bộ cài đã có Python 3.11, runtime CPU/CUDA và mô hình SO17. Không tải thêm model.
 2. Mở VietLip Server trong Start Menu. Chờ “Sẵn sàng đọc môi”.
 3. Kết nối điện thoại Android và PC cùng mạng Wi-Fi / LAN.
-4. Cài VietLip-1.10.0.apk trên điện thoại. Mở Cài đặt, nhập IP được server hiển thị
+4. Cài VietLip-1.10.1.apk trên điện thoại. Mở Cài đặt, nhập IP được server hiển thị
    (có thể chỉ nhập IP; app tự dùng http và cổng 7100), rồi Lưu và kiểm tra.
 5. Trở về Đọc môi, bấm Bắt đầu đọc môi. Giữ máy dọc, mặt đủ sáng, nói từng câu.
    Hệ thống tự chốt đoạn khi thấy khoảng ngừng. Kết thúc phiên để lưu bản ghi.

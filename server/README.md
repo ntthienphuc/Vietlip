@@ -1,4 +1,4 @@
-# Current application runtime (VietLip 1.10.0)
+# Current application runtime (VietLip 1.10.1)
 
 The installed Windows application is `desktop_launcher.py` with the bundled
 Python runtime. It shows the PC's LAN IP; Android connects over local Wi-Fi/LAN.

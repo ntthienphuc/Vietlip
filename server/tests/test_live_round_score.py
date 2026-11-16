@@ -49,3 +49,12 @@ def test_rewritten_cumulative_source_requires_manual_review():
                 {"type": "session_final", "transcript": "chị chào"},
             ]
         )
+
+
+def test_late_success_does_not_improve_live_score_and_remains_raw():
+    late = dict(status="completed", text="corrected", elapsed_ms=85000)
+    assert scorer.delivered_text("raw", late) == "raw"
+    assert scorer.deliverable(late) is False
+    assert scorer.delivered_text("raw", dict(late, elapsed_ms=1000)) == "corrected"
+    assert scorer.delivered_text("raw", dict(late, status="unavailable", elapsed_ms=20)) == "raw"
+    assert scorer.delivered_text("raw", None) == "raw"

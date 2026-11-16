@@ -4,6 +4,7 @@ import asyncio
 import json
 from pathlib import Path
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from fastapi.testclient import TestClient
@@ -44,6 +45,10 @@ def gateway(tmp_path):
                 "model": "model-test",
             }
             try:
+                for _ in range(response.get("trickle_count", 0)):
+                    self.wfile.write(b" ")
+                    self.wfile.flush()
+                    time.sleep(response.get("trickle_interval", 0.02))
                 self.wfile.write(json.dumps(payload).encode())
             except OSError:
                 pass
@@ -189,10 +194,32 @@ def test_quota_auth_empty_or_truncated_output_keeps_raw(gateway, status, finish,
 def test_timeout_preserves_raw(gateway):
     path, received, response, _, release = gateway
     response["block"] = True
-    result = asyncio.run(TranscriptRewriter(path, timeout=0.05).rewrite(request()))
+    result = asyncio.run(TranscriptRewriter(path, timeout=0.5).rewrite(request()))
     release.set()
     assert result.status == "unavailable" and result.text == "xin chao"
     assert len(received) == 1
+
+
+def test_total_deadline_stops_keepalives_and_releases_capacity(gateway):
+    path, received, response, *_ = gateway
+    response.update(trickle_count=100, trickle_interval=0.02)
+
+    async def exercise():
+        service = TranscriptRewriter(path, timeout=0.5)
+        started = time.monotonic()
+        result = await service.rewrite(request())
+        assert time.monotonic() - started < 1.2
+        assert result.code == "timeout" and result.text == "xin chao"
+        assert service._active == 0
+        # A delayed completion must not rewrite the cached timeout or call again.
+        assert await service.rewrite(request()) == result
+        response["trickle_count"] = 0
+        next_result = await service.rewrite(request(sentence_id="next-sentence"))
+        assert next_result.status == "completed"
+        assert service._active == 0
+
+    asyncio.run(exercise())
+    assert len(received) == 2
 
 
 def test_visual_empty_and_disabled_never_call_ai(gateway):

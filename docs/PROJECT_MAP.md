@@ -1,7 +1,7 @@
 # VietLip — sơ đồ project
 
 Mã ứng dụng đang bảo trì: `E:\Project\Lip_App\lip_reader`.
-Bộ cài mới nhất: `output/VietLip-1.10.0` (APK + ZIP Windows).
+Bộ cài mới nhất: `output/VietLip-1.10.1` (APK + ZIP Windows).
 Các bộ cài trong Downloads hoặc thư mục phiên bản cũ được giữ để đối chiếu/khôi phục.
 Recipe đóng gói và kiểm tra: [MAINTENANCE.md](MAINTENANCE.md).
 

@@ -54,6 +54,18 @@ def read_jsonl(path):
     ]
 
 
+def deliverable(reply, deadline_ms=18000):
+    return bool(
+        reply
+        and reply["status"] in {"completed", "unchanged"}
+        and reply["elapsed_ms"] < deadline_ms
+    )
+
+
+def delivered_text(source, reply, deadline_ms=18000):
+    return reply["text"] if deliverable(reply, deadline_ms) else source
+
+
 def committed_segments(events):
     previous, segments = "", []
     for event in events:
@@ -98,9 +110,7 @@ async def run(args):
         if row is not None and row.get("source_text") != source:
             raise ValueError("Actual AI input does not match this source segment")
         actual.append(row)
-        delivered.append(
-            row["text"] if row and row["status"] in {"completed", "unchanged"} else source
-        )
+        delivered.append(delivered_text(source, row, args.ai_deadline_ms))
         if args.openrouter:
             cache = args.output / f"openrouter-{i:03d}.json"
             source_hash = hashlib.sha256(source.encode()).hexdigest()
@@ -135,10 +145,9 @@ async def run(args):
     outputs = {"visual": raw, "groq_delivered": " ".join(delivered)}
     if args.openrouter:
         outputs["openrouter_delivered"] = " ".join(
-            r["text"] if r["status"] in {"completed", "unchanged"} else s
-            for s, r in zip(segments, alternative)
+            delivered_text(s, r, args.ai_deadline_ms) for s, r in zip(segments, alternative)
         )
-    timings = [r["elapsed_ms"] for r in actual if r and r["status"] in {"completed", "unchanged"}]
+    timings = [r["elapsed_ms"] for r in actual if deliverable(r, args.ai_deadline_ms)]
     report = dict(
         client_session=args.client_session,
         live_trace=str(args.live_trace),
@@ -148,7 +157,13 @@ async def run(args):
         reference=reference,
         source_segments=len(segments),
         actual_groq_replies=sum(r is not None for r in actual),
-        actual_groq_unavailable=sum(r is None or r["status"] == "unavailable" for r in actual),
+        actual_groq_unavailable=sum(not deliverable(r, args.ai_deadline_ms) for r in actual),
+        openrouter_unavailable=sum(not deliverable(r, args.ai_deadline_ms) for r in alternative),
+        openrouter_late_replies=sum(
+            r["status"] in {"completed", "unchanged"} and r["elapsed_ms"] >= args.ai_deadline_ms
+            for r in alternative
+        ),
+        client_ai_deadline_ms=args.ai_deadline_ms,
         transcripts=outputs,
         metrics={name: score(reference, text) for name, text in outputs.items()},
         groq_ai_ms=dict(
@@ -193,6 +208,7 @@ def main():
         default="script-unconfirmed",
     )
     parser.add_argument("--openrouter", action="store_true")
+    parser.add_argument("--ai-deadline-ms", type=int, default=18000)
     parser.add_argument("--output", type=Path, required=True)
     asyncio.run(run(parser.parse_args()))
 

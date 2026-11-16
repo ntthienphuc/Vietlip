@@ -654,7 +654,7 @@ class _CaptureScreenState extends State<CaptureScreen>
           alternatives: const [],
           processingMode: 'visual_only',
           riskNotice: _liveIncomplete
-              ? 'Phiên bị gián đoạn; bản ghi có thể thiếu nội dung.'
+              ? 'Một số đoạn chưa nhận dạng được; bản ghi có thể thiếu nội dung.'
               : 'Phụ đề trực tiếp cần được rà soát.',
           diagnostics: {
             'source': 'realtime',

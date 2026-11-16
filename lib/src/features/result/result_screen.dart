@@ -162,7 +162,7 @@ class _ResultContent extends StatelessWidget {
                   Expanded(
                     child: Text(
                       incomplete
-                          ? 'Phiên bị gián đoạn. Phụ đề có thể thiếu nội dung.'
+                          ? 'Một số đoạn chưa nhận dạng được. Phụ đề có thể thiếu nội dung.'
                           : 'Phụ đề tự động có thể sai. Hãy kiểm tra lại khi sử dụng.',
                       style: const TextStyle(
                         color: AppColors.muted,
