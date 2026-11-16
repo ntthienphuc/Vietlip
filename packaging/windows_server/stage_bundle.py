@@ -95,7 +95,7 @@ def main():
     entries = [{"path": str(path.relative_to(output)).replace("\\", "/"),
                 "bytes": path.stat().st_size, "sha256": sha256(path)}
                for path in sorted(output.rglob("*")) if path.is_file()]
-    manifest = {"app": "VietLip Server", "version": "1.9.0", "created": time.time(),
+    manifest = {"app": "VietLip Server", "version": "1.10.0", "created": time.time(),
                 "files": entries, "total_bytes": sum(item["bytes"] for item in entries)}
     (output / "PAYLOAD_MANIFEST.json").write_text(json.dumps(manifest, indent=2), encoding="utf8")
     print(json.dumps({"files": len(entries), "bytes": manifest["total_bytes"],

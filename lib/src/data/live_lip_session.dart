@@ -23,6 +23,7 @@ class LiveLipUpdate {
     this.evidence = const {},
     this.captionEventId,
     this.receiptClock,
+    this.turnId,
   });
   final String type;
   final String transcript;
@@ -42,8 +43,10 @@ class LiveLipUpdate {
   final Map<String, dynamic> evidence;
   final int? captionEventId;
   final Stopwatch? receiptClock;
+  final int? turnId;
   factory LiveLipUpdate.fromJson(Map<String, dynamic> json) => LiveLipUpdate(
     type: json['type']?.toString() ?? 'unknown',
+    turnId: (json['turn_id'] as num?)?.toInt(),
     transcript: json['transcript']?.toString() ?? '',
     stableTranscript: json['stable_transcript']?.toString() ?? '',
     message: json['message']?.toString(),

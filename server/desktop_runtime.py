@@ -7,9 +7,9 @@ import os
 from pathlib import Path
 import socket
 import urllib.request
+from app.version import APP_VERSION as APP_VERSION
 
 APP_NAME = "VietLip Server"
-APP_VERSION = "1.9.0"
 ROOT = Path(__file__).resolve().parent
 
 

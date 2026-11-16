@@ -181,6 +181,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       subtitle: Text(
                         '${item.modelId.startsWith('QA-prerecorded-') ? 'Kiểm thử phát lại · ' : ''}'
                         '${_formatDate(item.createdAt)}'
+                        '${item.sentences.any((s) => s.rewrite != null) ? ' · AI theo câu' : ''}'
                         '${item.rewrite?.hasText == true
                             ? ' · Có bản AI'
                             : item.rewrite?.pending == true

@@ -8,6 +8,7 @@ participant's actual utterances. UI sampling is not precise endpoint timing.
 import argparse
 import json
 import subprocess
+import sys
 import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
@@ -15,6 +16,7 @@ from pathlib import Path
 
 
 def main():
+    sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--adb", required=True)
     parser.add_argument("--serial", required=True)
@@ -27,7 +29,9 @@ def main():
     def adb(*command):
         return subprocess.run(
             [args.adb, "-s", args.serial, *command],
-            capture_output=True, timeout=20, check=True,
+            capture_output=True,
+            timeout=20,
+            check=True,
         ).stdout
 
     records = []
@@ -56,7 +60,16 @@ def main():
             time.sleep(max(0, args.interval - (time.monotonic() - tick)))
     finally:
         for name, command in {
-            "app-logcat.txt": ("logcat", "-d", "-v", "threadtime", "-s", "flutter", "LipNativeFrames", "AndroidRuntime"),
+            "app-logcat.txt": (
+                "logcat",
+                "-d",
+                "-v",
+                "threadtime",
+                "-s",
+                "flutter",
+                "LipNativeFrames",
+                "AndroidRuntime",
+            ),
             "camera.txt": ("shell", "dumpsys", "media.camera"),
             "battery.txt": ("shell", "dumpsys", "battery"),
             "package.txt": ("shell", "dumpsys", "package", "vn.lipread.lip_reader"),

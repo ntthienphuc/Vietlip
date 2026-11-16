@@ -13,6 +13,7 @@ import '../../data/capture_storage.dart';
 import '../../models/transcription_result.dart';
 import '../../models/reading_method.dart';
 import '../../data/transcript_review.dart';
+import '../../data/live_sentence_recovery.dart';
 import '../../data/history_repository.dart';
 import '../../data/live_lip_session.dart';
 import '../../data/lip_reader_api.dart';
@@ -21,6 +22,8 @@ import '../../theme/app_theme.dart';
 import '../../widgets/app_shell.dart';
 import '../../widgets/app_brand.dart';
 import 'live_caption_panel.dart';
+import 'sentence_caption_panel.dart';
+import '../settings/reading_method_setting.dart';
 import 'camera_viewport.dart';
 import 'capture_camera_panel.dart';
 import 'live_capture_layout.dart';
@@ -88,6 +91,7 @@ class _CaptureScreenState extends State<CaptureScreen>
   TranscriptionResult? _lastLiveResult;
   ReadingMethod _sessionMethod = ReadingMethod.visual;
   String _sessionServerAddress = '';
+  LiveSentenceRecovery? _sentenceRecovery;
 
   bool get _isRecording => _camera?.value.isRecordingVideo == true;
   bool get _showLiveSession =>
@@ -101,6 +105,23 @@ class _CaptureScreenState extends State<CaptureScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    widget.settings.addListener(_settingsChanged);
+  }
+
+  void _settingsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _sentenceChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _releaseRecovery() {
+    final previous = _sentenceRecovery;
+    _sentenceRecovery = null;
+    if (previous == null) return;
+    previous.removeListener(_sentenceChanged);
+    unawaited(previous.settled.then((_) => previous.dispose()));
   }
 
   @override
@@ -122,6 +143,8 @@ class _CaptureScreenState extends State<CaptureScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    widget.settings.removeListener(_settingsChanged);
+    _releaseRecovery();
     _timer?.cancel();
     unawaited(_closeLiveSession());
     _scrollController.dispose();
@@ -372,6 +395,18 @@ class _CaptureScreenState extends State<CaptureScreen>
     await _closeLiveSession();
     _sessionMethod = widget.settings.readingMethod;
     _sessionServerAddress = widget.settings.apiUrl;
+    final provider = widget.settings.aiProvider;
+    final address = _sessionServerAddress;
+    final method = _sessionMethod;
+    _releaseRecovery();
+    _sentenceRecovery = LiveSentenceRecovery(
+      sessionId: 'live-${DateTime.now().microsecondsSinceEpoch}',
+      method: method,
+      provider: provider,
+      call: (text, id) => LipReaderApi.atAddress(
+        address,
+      ).rewrite(text, method, provider: provider, sentenceId: id),
+    )..addListener(_sentenceChanged);
     _lastLiveResult = null;
     if (mounted) setState(() => _liveStatus = 'Đang kết nối phụ đề…');
     final connectClock = Stopwatch()..start();
@@ -443,6 +478,7 @@ class _CaptureScreenState extends State<CaptureScreen>
           ? 'Đã hoàn tất phiên'
           : _liveWarning ?? liveStatusLabel(_liveState, update.decoderState);
     });
+    _sentenceRecovery?.accept(update);
     if (update.captionEventId != null) {
       final session = _liveSession;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -599,32 +635,42 @@ class _CaptureScreenState extends State<CaptureScreen>
           ? finalTranscript!.trim()
           : _liveTranscript.trim();
       if (savedTranscript.isNotEmpty) {
-        _lastLiveResult = await saveWithReview(
-          settings: widget.settings,
-          history: widget.history,
-          method: _sessionMethod,
-          serverAddress: _sessionServerAddress,
-          result: TranscriptionResult(
-            requestId: 'live-${DateTime.now().microsecondsSinceEpoch}',
+        final recovery = _sentenceRecovery;
+        recovery?.accept(
+          LiveLipUpdate(
+            type: 'session_final',
             transcript: savedTranscript,
-            status: 'review_required',
-            modelId: _liveModelId,
-            elapsedMs: _captureClock.elapsedMilliseconds,
-            numFrames: _liveReceivedFrames,
-            createdAt: DateTime.now(),
-            alternatives: const [],
-            processingMode: 'visual_only',
-            riskNotice: _liveIncomplete
-                ? 'Phiên bị gián đoạn; bản ghi có thể thiếu nội dung.'
-                : 'Phụ đề trực tiếp cần được rà soát.',
-            diagnostics: {
-              'source': 'realtime',
-              'incomplete': _liveIncomplete,
-              'evidence': _liveEvidence,
-              'video_path': video.path,
-            },
+            stableTranscript: savedTranscript,
           ),
         );
+        final saved = TranscriptionResult(
+          requestId: 'live-${DateTime.now().microsecondsSinceEpoch}',
+          transcript: savedTranscript,
+          status: 'review_required',
+          modelId: _liveModelId,
+          elapsedMs: _captureClock.elapsedMilliseconds,
+          numFrames: _liveReceivedFrames,
+          createdAt: DateTime.now(),
+          alternatives: const [],
+          processingMode: 'visual_only',
+          riskNotice: _liveIncomplete
+              ? 'Phiên bị gián đoạn; bản ghi có thể thiếu nội dung.'
+              : 'Phụ đề trực tiếp cần được rà soát.',
+          diagnostics: {
+            'source': 'realtime',
+            'incomplete': _liveIncomplete,
+            'evidence': _liveEvidence,
+            'video_path': video.path,
+            'reading_method': _sessionMethod.id,
+            'ai_provider': recovery?.provider.id,
+          },
+          sentences: recovery?.sentences ?? const [],
+        );
+        await widget.history.add(saved);
+        _lastLiveResult = saved;
+        if (recovery != null) {
+          unawaited(_saveSentenceUpdates(recovery, saved, widget.history));
+        }
       }
       if (mounted) {
         setState(() {
@@ -651,6 +697,26 @@ class _CaptureScreenState extends State<CaptureScreen>
         CaptureSessionNotification(_isRecording).dispatch(context);
       }
     }
+  }
+
+  Future<void> _saveSentenceUpdates(
+    LiveSentenceRecovery recovery,
+    TranscriptionResult saved,
+    HistoryRepository history,
+  ) async {
+    void persist() {
+      unawaited(
+        history
+            .replaceIfPresent(saved.withSentences(recovery.sentences))
+            .catchError((Object _) {}),
+      );
+    }
+
+    recovery.addListener(persist);
+    persist();
+    await recovery.settled;
+    recovery.removeListener(persist);
+    persist();
   }
 
   Future<void> _pickVideo() async {
@@ -688,6 +754,7 @@ class _CaptureScreenState extends State<CaptureScreen>
     });
     try {
       final method = widget.settings.readingMethod;
+      final provider = widget.settings.aiProvider;
       final address = widget.settings.apiUrl;
       final result = await LipReaderApi.atAddress(address).transcribe(
         videoPath: video.path,
@@ -704,6 +771,7 @@ class _CaptureScreenState extends State<CaptureScreen>
         history: widget.history,
         method: method,
         serverAddress: address,
+        aiProvider: provider,
       );
       if (!mounted) return;
       await context.push('/result', extra: saved);
@@ -730,6 +798,7 @@ class _CaptureScreenState extends State<CaptureScreen>
   Widget build(BuildContext context) {
     if (_showLiveSession) {
       return LiveCaptureLayout(
+        recovery: _sessionMethod.usesAi,
         header: Row(
           children: [
             const BrandMark(size: 32),
@@ -752,9 +821,25 @@ class _CaptureScreenState extends State<CaptureScreen>
     }
     if (_video == null && !_liveWasActive) {
       return CaptureReadyLayout(
+        recovery: widget.settings.readingMethod.usesAi,
         header: Row(
           children: [
             const Expanded(child: CaptureBrandHeader()),
+            IconButton(
+              tooltip: 'Chế độ đọc môi: ${widget.settings.readingMethod.label}',
+              onPressed: _changingRecording
+                  ? null
+                  : () => ReadingMethodSetting.showPicker(
+                      context,
+                      widget.settings,
+                    ),
+              icon: Icon(
+                widget.settings.readingMethod.usesAi
+                    ? Icons.auto_awesome_rounded
+                    : Icons.closed_caption_outlined,
+                size: 20,
+              ),
+            ),
             IconButton(
               tooltip: 'Hướng dẫn đọc môi',
               onPressed: _changingRecording ? null : _showCaptureOptions,
@@ -1152,38 +1237,61 @@ class _CaptureScreenState extends State<CaptureScreen>
     );
   }
 
-  Widget _buildLiveDraft({bool idle = false}) => SizedBox(
-    height:
-        (idle ? 220 : 270) +
-        (MediaQuery.textScalerOf(context).scale(1) - 1).clamp(0, 3) * 210,
-    child: LiveCaptionPanel(
-      transcript: _liveTranscript,
-      committed: _liveStableTranscript,
-      provisional: _liveProvisional,
-      status: idle ? 'Chưa bắt đầu' : _liveStatus,
-      idle: idle,
-      unavailable:
-          !idle &&
-          (_liveWarning != null ||
-              const {
-                'waiting_for_face',
-                'multiple_faces',
-                'face_too_small',
-                'poor_light',
-                'look_straight',
-                'head_motion',
-                'camera_stalled',
-                'activity_unavailable',
-                'disconnected',
-                'network_stalled',
-              }.contains(_liveState)),
-      captureFps: _liveFps,
-      elapsedMs: _liveElapsedMs,
-      waitingForCaption: {'speaking', 'pausing'}.contains(_liveState),
-      unavailableWindows:
-          (_liveEvidence['unavailable_windows'] as num?)?.toInt() ?? 0,
-    ),
-  );
+  Widget _buildLiveDraft({bool idle = false}) {
+    final recovery = _sentenceRecovery;
+    final usesAi = idle
+        ? widget.settings.readingMethod.usesAi
+        : _sessionMethod.usesAi;
+    if (usesAi) {
+      return SizedBox(
+        height:
+            320 +
+            (MediaQuery.textScalerOf(context).scale(1) - 1).clamp(0, 3) * 210,
+        child: SentenceCaptionPanel(
+          controller: recovery,
+          sentences: idle ? const [] : recovery?.sentences ?? const [],
+          draft: idle ? '' : recovery?.draft ?? '',
+          provider: idle
+              ? widget.settings.aiProvider
+              : recovery?.provider ?? widget.settings.aiProvider,
+          status: _liveStatus,
+          idle: idle,
+        ),
+      );
+    }
+    return SizedBox(
+      height:
+          (idle ? 220 : 270) +
+          (MediaQuery.textScalerOf(context).scale(1) - 1).clamp(0, 3) * 210,
+      child: LiveCaptionPanel(
+        transcript: _liveTranscript,
+        committed: _liveStableTranscript,
+        provisional: _liveProvisional,
+        status: idle ? 'Chưa bắt đầu' : _liveStatus,
+        idle: idle,
+        unavailable:
+            !idle &&
+            (_liveWarning != null ||
+                const {
+                  'waiting_for_face',
+                  'multiple_faces',
+                  'face_too_small',
+                  'poor_light',
+                  'look_straight',
+                  'head_motion',
+                  'camera_stalled',
+                  'activity_unavailable',
+                  'disconnected',
+                  'network_stalled',
+                }.contains(_liveState)),
+        captureFps: _liveFps,
+        elapsedMs: _liveElapsedMs,
+        waitingForCaption: {'speaking', 'pausing'}.contains(_liveState),
+        unavailableWindows:
+            (_liveEvidence['unavailable_windows'] as num?)?.toInt() ?? 0,
+      ),
+    );
+  }
 
   Widget _buildSelectedVideo() {
     final video = _video!;

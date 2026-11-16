@@ -1,5 +1,8 @@
 # VietLip 1.9 — lựa chọn phương pháp phụ đề
 
+Tài liệu lịch sử của bản 1.9. Bản hiện tại dùng hai chế độ và AI theo từng câu;
+xem [VietLip 1.10](LIVE_AI_1_10.md).
+
 Mặc định **Trực tiếp — SO17**: giữ cấu hình live đã kiểm chứng, không gửi chữ
 cho LLM và không chờ bước sửa câu. Kết nối camera/server vẫn qua Wi-Fi nội bộ.
 

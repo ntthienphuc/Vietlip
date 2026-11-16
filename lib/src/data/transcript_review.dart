@@ -18,8 +18,10 @@ Future<TranscriptionResult> saveWithReview({
   RewriteCall? rewrite,
   ReadingMethod? method,
   String? serverAddress,
+  AiProvider? aiProvider,
 }) async {
   final selectedMethod = method ?? settings.readingMethod;
+  final provider = aiProvider ?? settings.aiProvider;
   // Freeze the destination with the method; changing settings cannot redirect
   // an in-flight session to a different server.
   final apiUrl = serverAddress ?? settings.apiUrl;
@@ -31,6 +33,7 @@ Future<TranscriptionResult> saveWithReview({
             method: selectedMethod.id,
             status: 'pending',
             startedAt: DateTime.now(),
+            provider: provider.id,
           ),
         )
       : result;
@@ -41,8 +44,9 @@ Future<TranscriptionResult> saveWithReview({
   // Use a lightweight immutable API destination; no preferences are changed.
   final call =
       rewrite ??
-      ((text, selected) =>
-          LipReaderApi.atAddress(apiUrl).rewrite(text, selected));
+      ((text, selected) => LipReaderApi.atAddress(
+        apiUrl,
+      ).rewrite(text, selected, provider: provider));
   unawaited(_finish(saved, selectedMethod, history, call));
   return saved;
 }

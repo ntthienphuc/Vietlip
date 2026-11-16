@@ -52,15 +52,11 @@ def package(kit, output, receipt):
                 continue
             # Keep the old instructions as provenance; give the new layout its
             # own clear entry point at the top of the ZIP.
-            entry = (
-                "03-Huong-dan/BAT_DAU_BO_CAI_GOC.txt" if name == "BAT_DAU.txt" else name
-            )
+            entry = "03-Huong-dan/BAT_DAU_BO_CAI_GOC.txt" if name == "BAT_DAU.txt" else name
             target.write(path, entry)
             expected[entry] = file_digest(path)
         target.write(kit / "SHA256SUMS.json", "03-Huong-dan/SHA256_BO_CAI_GOC.json")
-        expected["03-Huong-dan/SHA256_BO_CAI_GOC.json"] = file_digest(
-            kit / "SHA256SUMS.json"
-        )
+        expected["03-Huong-dan/SHA256_BO_CAI_GOC.json"] = file_digest(kit / "SHA256SUMS.json")
         instructions = (
             f"VIETLIP {version} — CÀI ĐẶT QUA WI-FI\n\n"
             "1. Giải nén toàn bộ ZIP này bằng Extract All.\n"

@@ -199,7 +199,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     Text(
                       'Phụ đề trực tiếp chỉ dùng hình ảnh gửi tới máy chủ bạn đã nhập. '
-                      'Nếu bật AI sau phiên, văn bản được gửi tới dịch vụ đã cấu hình trên PC. '
+                      'Nếu bật Khôi phục câu, từng câu đã chốt được gửi tới Groq hoặc OpenRouter qua PC. '
                       'Video có âm thanh được lưu trên điện thoại để đối chiếu. '
                       'Lịch sử lưu trên thiết bị; ứng dụng không tự dùng video để huấn luyện.',
                       style: TextStyle(color: AppColors.muted, height: 1.6),

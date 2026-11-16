@@ -1,10 +1,10 @@
-VIETLIP SERVER 1.9.0 — ĐỌC MÔI TIẾNG VIỆT
+VIETLIP SERVER 1.10.0 — ĐỌC MÔI TIẾNG VIỆT
 
 1. Cài VietLip Server bằng file Setup.exe. Giữ tất cả file .bin cạnh Setup.exe.
    Bộ cài đã có Python 3.11, runtime CPU/CUDA và mô hình SO17. Không tải thêm model.
 2. Mở VietLip Server trong Start Menu. Chờ “Sẵn sàng đọc môi”.
 3. Kết nối điện thoại Android và PC cùng mạng Wi-Fi / LAN.
-4. Cài VietLip-1.9.0.apk trên điện thoại. Mở Cài đặt, nhập IP được server hiển thị
+4. Cài VietLip-1.10.0.apk trên điện thoại. Mở Cài đặt, nhập IP được server hiển thị
    (có thể chỉ nhập IP; app tự dùng http và cổng 7100), rồi Lưu và kiểm tra.
 5. Trở về Đọc môi, bấm Bắt đầu đọc môi. Giữ máy dọc, mặt đủ sáng, nói từng câu.
    Hệ thống tự chốt đoạn khi thấy khoảng ngừng. Kết thúc phiên để lưu bản ghi.
@@ -43,3 +43,12 @@ KIỂM TRA / GỠ CÀI ĐẶT
   .\runtime\python.exe .\verify_bundle.py
 - Gỡ VietLip Server từ Windows Settings > Apps. Bản ghi điện thoại và các project
   khác không bị tác động. Nhật ký local được giữ để đối chiếu.
+
+AI KHÔI PHỤC CÂU (TÙY CHỌN)
+- Chọn Cài đặt > Cách đọc môi > Khôi phục câu, rồi chọn Groq hoặc OpenRouter.
+- Khi chốt câu, app hiện bản đọc môi ở trên và bản khôi phục ở dưới ngay trong live.
+- Tạo rewrite.json từ rewrite.example.json tại %LOCALAPPDATA%\VietLip, cấu hình
+  key riêng trên PC và enabled=true. Key không nằm trong APK hoặc bộ cài.
+- OpenRouter chỉ dùng model :free, không tự chuyển sang model trả phí.
+- AI cần Internet, chỉ nhận văn bản. Lỗi API/hết quota giữ nguyên câu gốc.
+- Trực tiếp vẫn hoạt động trong mạng nội bộ mà không cần API key.

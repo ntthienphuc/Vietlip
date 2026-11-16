@@ -12,10 +12,12 @@ class CaptureReadyLayout extends StatelessWidget {
     required this.captions,
     required this.controls,
     this.notice,
+    this.recovery = false,
   });
 
   final Widget header, connection, preview, captions, controls;
   final Widget? notice;
+  final bool recovery;
 
   @override
   Widget build(BuildContext context) => SafeArea(
@@ -25,7 +27,11 @@ class CaptureReadyLayout extends StatelessWidget {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final scale = MediaQuery.textScalerOf(context).scale(1);
-              final minHeight = scale > 1.2 ? 640 + (scale - 1) * 400 : 440.0;
+              final minHeight = scale > 1.2
+                  ? 640 + (scale - 1) * 400
+                  : recovery
+                  ? 570.0
+                  : 440.0;
               final height = math.max(
                 constraints.maxHeight,
                 minHeight + (notice == null ? 0 : 200 * scale),
@@ -60,7 +66,9 @@ class CaptureReadyLayout extends StatelessWidget {
                                   ],
                                 );
                               }
-                              final captionHeight = scale > 1.2
+                              final captionHeight = recovery
+                                  ? 280 + math.max(0.0, scale - 1) * 230
+                                  : scale > 1.2
                                   ? 220 + (scale - 1) * 230
                                   : (panel.maxHeight * .36).clamp(172.0, 195.0);
                               return Column(

@@ -30,11 +30,8 @@ class LipReaderApi {
   final Dio _dio;
 
   Future<Map<String, bool>> rewriteMethods() async {
-    final response = await _dio.get<Map<String, dynamic>>(
-      '$apiUrl/v1/rewrite-methods',
-      options: Options(receiveTimeout: const Duration(seconds: 5)),
-    );
-    final methods = response.data?['methods'] as List? ?? const [];
+    final configuration = await rewriteConfiguration();
+    final methods = configuration['methods'] as List? ?? const [];
     return {
       for (final method in methods)
         if (method is Map)
@@ -42,17 +39,37 @@ class LipReaderApi {
     };
   }
 
-  Future<TranscriptRewrite> rewrite(String text, ReadingMethod method) async {
+  Future<Map<String, dynamic>> rewriteConfiguration() async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '$apiUrl/v1/rewrite-methods',
+      options: Options(receiveTimeout: const Duration(seconds: 5)),
+    );
+    return response.data ?? const {};
+  }
+
+  Future<TranscriptRewrite> rewrite(
+    String text,
+    ReadingMethod method, {
+    AiProvider provider = AiProvider.groq,
+    String? sentenceId,
+  }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '$apiUrl/v1/rewrites',
-      data: {'text': text, 'method': method.id},
+      data: {
+        'text': text,
+        'method': method.id,
+        'provider': provider.id,
+        'sentence_id': ?sentenceId,
+      },
       options: Options(
-        receiveTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 16),
         sendTimeout: const Duration(seconds: 5),
       ),
     );
     final value = TranscriptRewrite.fromJson(response.data ?? const {});
     if (value.method != method.id ||
+        value.provider != provider.id ||
+        (sentenceId != null && value.sentenceId != sentenceId) ||
         !{'completed', 'unchanged', 'unavailable'}.contains(value.status)) {
       throw const FormatException('Phản hồi AI không hợp lệ.');
     }

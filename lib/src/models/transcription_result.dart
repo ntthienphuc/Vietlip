@@ -1,4 +1,5 @@
 import 'transcript_rewrite.dart';
+import 'live_sentence.dart';
 
 class AlternativeTranscript {
   const AlternativeTranscript({required this.text, this.rawScore});
@@ -32,6 +33,7 @@ class TranscriptionResult {
     this.consensusTranscript,
     this.riskNotice,
     this.rewrite,
+    this.sentences = const [],
   });
 
   final String requestId;
@@ -50,9 +52,16 @@ class TranscriptionResult {
   final String? consensusTranscript;
   final String? riskNotice;
   final TranscriptRewrite? rewrite;
+  final List<LiveSentence> sentences;
 
   TranscriptionResult withRewrite(TranscriptRewrite value) =>
       TranscriptionResult.fromJson({...toJson(), 'rewrite': value.toJson()});
+
+  TranscriptionResult withSentences(List<LiveSentence> value) =>
+      TranscriptionResult.fromJson({
+        ...toJson(),
+        'sentences': value.map((s) => s.toJson()).toList(),
+      });
 
   factory TranscriptionResult.fromJson(Map<String, dynamic> json) {
     return TranscriptionResult(
@@ -84,6 +93,10 @@ class TranscriptionResult {
               Map<String, dynamic>.from(json['rewrite'] as Map),
             )
           : null,
+      sentences: (json['sentences'] as List? ?? const [])
+          .whereType<Map>()
+          .map((row) => LiveSentence.fromJson(Map<String, dynamic>.from(row)))
+          .toList(),
     );
   }
 
@@ -102,5 +115,6 @@ class TranscriptionResult {
     'risk_notice': riskNotice,
     'diagnostics': diagnostics,
     'rewrite': rewrite?.toJson(),
+    'sentences': sentences.map((s) => s.toJson()).toList(),
   };
 }

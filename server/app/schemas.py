@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
+from .version import APP_VERSION
 
 
 class Alternative(BaseModel):
@@ -31,7 +32,7 @@ class TranscriptionResponse(BaseModel):
 class HealthResponse(BaseModel):
     service: str = "lip-reader-api"
     app_name: str = "VietLip"
-    app_version: str = "1.9.0"
+    app_version: str = APP_VERSION
     api_version: str
     status: Literal["ok", "degraded"]
     model_state: str

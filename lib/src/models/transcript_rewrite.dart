@@ -7,12 +7,17 @@ class TranscriptRewrite {
     this.message,
     this.elapsedMs = 0,
     this.startedAt,
+    this.provider = 'groq',
+    this.sentenceId,
+    this.code,
   });
 
   final String method, status, text;
   final String? modelId, message;
   final int elapsedMs;
   final DateTime? startedAt;
+  final String provider;
+  final String? sentenceId, code;
   bool get pending =>
       status == 'pending' &&
       startedAt != null &&
@@ -29,6 +34,9 @@ class TranscriptRewrite {
         message: json['message']?.toString(),
         elapsedMs: (json['elapsed_ms'] as num?)?.round() ?? 0,
         startedAt: DateTime.tryParse(json['started_at']?.toString() ?? ''),
+        provider: json['provider']?.toString() ?? 'groq',
+        sentenceId: json['sentence_id']?.toString(),
+        code: json['code']?.toString(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -39,5 +47,8 @@ class TranscriptRewrite {
     'message': message,
     'elapsed_ms': elapsedMs,
     'started_at': startedAt?.toIso8601String(),
+    'provider': provider,
+    'sentence_id': sentenceId,
+    'code': code,
   };
 }

@@ -1,11 +1,11 @@
-# Current application runtime (VietLip 1.9.0)
+# Current application runtime (VietLip 1.10.0)
 
 The installed Windows application is `desktop_launcher.py` with the bundled
 Python runtime. It shows the PC's LAN IP; Android connects over local Wi-Fi/LAN.
 Build/install instructions: `../packaging/windows_server/README.md`. No USB
 inference route, LLM or external API key is needed for the default SO17 workflow.
-Optional AI text review runs after a session and preserves the raw caption.
-See `../docs/READING_METHODS_1_9.md` for its separate PC configuration and endpoints.
+Optional AI sentence recovery runs at each live endpoint and preserves the raw caption.
+See `../docs/LIVE_AI_1_10.md` for its separate PC configuration and endpoints.
 
 Start `run_realtime.ps1` for the tested SO17 native runtime. Model startup and
 visual-activity preparation finish before live connections are accepted. See the

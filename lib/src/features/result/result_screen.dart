@@ -7,6 +7,7 @@ import '../../data/history_repository.dart';
 import '../../theme/app_theme.dart';
 import 'recording_export_card.dart';
 import 'transcript_rewrite_card.dart';
+import '../capture/sentence_caption_panel.dart';
 
 class ResultScreen extends StatelessWidget {
   const ResultScreen({required this.result, this.history, super.key});
@@ -137,6 +138,17 @@ class _ResultContent extends StatelessWidget {
               if (result.rewrite != null) ...[
                 TranscriptRewriteCard(review: result.rewrite!),
                 const SizedBox(height: 14),
+              ],
+              if (result.sentences.any((s) => s.rewrite != null)) ...[
+                const Text(
+                  'Khôi phục theo từng câu',
+                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 12),
+                for (final sentence in result.sentences) ...[
+                  SentencePairCard(sentence: sentence),
+                  const SizedBox(height: 12),
+                ],
               ],
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,

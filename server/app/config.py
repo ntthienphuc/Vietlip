@@ -80,7 +80,7 @@ class Settings:
         model_root = server_root / "vendor" / "auto_avsr"
         vocabulary_root = server_root / "assets" / "tokenizers"
         return cls(
-            api_version="1.4.0",
+            api_version="1.5.0",
             model_id=os.getenv(
                 "LIP_MODEL_ID",
                 "auto-avsr-vi-so_seed17",

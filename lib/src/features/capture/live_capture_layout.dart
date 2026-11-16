@@ -9,8 +9,10 @@ class LiveCaptureLayout extends StatelessWidget {
     required this.preview,
     required this.captions,
     required this.controls,
+    this.recovery = false,
   });
   final Widget header, preview, captions, controls;
+  final bool recovery;
 
   @override
   Widget build(BuildContext context) => SafeArea(
@@ -20,11 +22,14 @@ class LiveCaptureLayout extends StatelessWidget {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final scale = MediaQuery.textScalerOf(context).scale(1);
-              final minCaption = 235.0 + math.max(0, scale - 1) * 230;
+              final minCaption =
+                  (recovery ? 310.0 : 235.0) + math.max(0, scale - 1) * 230;
               final wide = constraints.maxWidth >= 700;
               final minHeight = wide
                   ? math.max(380.0, minCaption + 100)
-                  : 300 + minCaption + 92 * math.max(1, scale);
+                  : (recovery ? 230 : 300) +
+                        minCaption +
+                        92 * math.max(1, scale);
               final height = math.max(constraints.maxHeight, minHeight);
               return SingleChildScrollView(
                 child: SizedBox(

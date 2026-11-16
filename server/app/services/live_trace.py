@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class LiveTrace:
-    def __init__(self):
+    def __init__(self, *, prefix="live"):
         self.started = time.monotonic()
         self.file = None
         self.bytes = 0
@@ -20,7 +20,7 @@ class LiveTrace:
             try:
                 root = Path(directory)
                 root.mkdir(parents=True, exist_ok=True)
-                self.file = (root / f"live-{uuid4().hex}.jsonl").open("x", encoding="utf8")
+                self.file = (root / f"{prefix}-{uuid4().hex}.jsonl").open("x", encoding="utf8")
             except OSError:
                 logger.warning("Could not create local live trace", exc_info=True)
 

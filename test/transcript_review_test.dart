@@ -29,10 +29,10 @@ void main() {
       final settings = SettingsController();
       await settings.load();
       expect(settings.readingMethod, ReadingMethod.visual);
-      await settings.setReadingMethod(ReadingMethod.gatewayDirect);
+      await settings.setReadingMethod(ReadingMethod.recovery);
       final reopened = SettingsController();
       await reopened.load();
-      expect(reopened.readingMethod, ReadingMethod.gatewayDirect);
+      expect(reopened.readingMethod, ReadingMethod.recovery);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('vietlip_reading_method_v1', 'retired-model');
       await reopened.load();
@@ -44,7 +44,7 @@ void main() {
     'AI saves raw before completion and changes only a separate field',
     () async {
       final settings = SettingsController();
-      await settings.setReadingMethod(ReadingMethod.gatewayDirect);
+      await settings.setReadingMethod(ReadingMethod.recovery);
       final history = HistoryRepository();
       final response = Completer<TranscriptRewrite>();
       ReadingMethod? requested;
@@ -63,14 +63,14 @@ void main() {
       await settings.setReadingMethod(ReadingMethod.visual);
       response.complete(
         const TranscriptRewrite(
-          method: 'gateway_direct',
+          method: 'recovery',
           status: 'completed',
           text: 'một câu AI sửa',
         ),
       );
       await Future<void>.delayed(Duration.zero);
       final result = (await history.list()).single;
-      expect(requested, ReadingMethod.gatewayDirect);
+      expect(requested, ReadingMethod.recovery);
       expect(result.transcript, saved.transcript);
       expect(result.rewrite!.text, 'một câu AI sửa');
       expect(result.diagnostics, saved.diagnostics);
@@ -97,7 +97,7 @@ void main() {
       history: history,
       rewrite: rewrite,
     );
-    await settings.setReadingMethod(ReadingMethod.gatewayDirect);
+    await settings.setReadingMethod(ReadingMethod.recovery);
     await saveWithReview(
       result: TranscriptionResult.fromJson({
         'request_id': 'silent',
@@ -115,7 +115,7 @@ void main() {
     'AI error preserves raw caption and the original video reference',
     () async {
       final settings = SettingsController();
-      await settings.setReadingMethod(ReadingMethod.gatewayConservative);
+      await settings.setReadingMethod(ReadingMethod.recovery);
       final history = HistoryRepository();
       await saveWithReview(
         result: original(),
@@ -135,7 +135,7 @@ void main() {
     'late AI completion cannot recreate history after it was cleared',
     () async {
       final settings = SettingsController();
-      await settings.setReadingMethod(ReadingMethod.gatewayDirect);
+      await settings.setReadingMethod(ReadingMethod.recovery);
       final history = HistoryRepository();
       final response = Completer<TranscriptRewrite>();
       await saveWithReview(
@@ -147,7 +147,7 @@ void main() {
       await history.clear();
       response.complete(
         const TranscriptRewrite(
-          method: 'gateway_direct',
+          method: 'recovery',
           status: 'completed',
           text: 'late reply',
         ),
@@ -165,7 +165,7 @@ void main() {
       history.replaceIfPresent(
         original().withRewrite(
           const TranscriptRewrite(
-            method: 'gateway_direct',
+            method: 'recovery',
             status: 'completed',
             text: 'AI result',
           ),
@@ -183,7 +183,7 @@ void main() {
     final history = HistoryRepository();
     final pending = original().withRewrite(
       TranscriptRewrite(
-        method: 'gateway_direct',
+        method: 'recovery',
         status: 'pending',
         startedAt: DateTime.now(),
       ),
@@ -200,7 +200,7 @@ void main() {
     await history.replaceIfPresent(
       original().withRewrite(
         const TranscriptRewrite(
-          method: 'gateway_direct',
+          method: 'recovery',
           status: 'completed',
           text: 'bản sửa riêng',
         ),
@@ -225,7 +225,7 @@ void main() {
   ) async {
     final result = original().withRewrite(
       TranscriptRewrite(
-        method: 'gateway_direct',
+        method: 'recovery',
         status: 'pending',
         startedAt: DateTime.now().subtract(const Duration(minutes: 1)),
       ),
