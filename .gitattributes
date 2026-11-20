@@ -15,3 +15,5 @@
 *.jpg binary
 # Preserve upstream formatting when importing the vendored runtime.
 server/vendor/** -whitespace
+# Keep the report template identical to the archived typesetting source.
+docs/ban-giao-1.10.5/template/*.typ text eol=lf -whitespace

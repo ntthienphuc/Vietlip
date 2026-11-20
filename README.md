@@ -4,6 +4,9 @@ VietLip hiển thị phụ đề tiếng Việt từ khẩu hình. Điện tho�
 
 ## Cài đặt và sử dụng
 
+[Danh mục bộ bàn giao 1.10.5](docs/ban-giao-1.10.5/README.md) gồm mã SHA-256
+của APK, bộ cài Windows, hai tài liệu PDF và hai video demo.
+
 1. Trên Windows 10/11 x64, chạy **VietLip-Server-Setup-1.10.5.exe**. Dành khoảng 6 GB cho ứng dụng và thêm 3,5 GB trên ổ chứa thư mục tạm. Bộ cài mang theo Python, runtime và mô hình. Server tự dùng GPU NVIDIA khi CUDA khả dụng hoặc dùng CPU.
 2. Mở **VietLip Server** từ Start Menu và chờ **Sẵn sàng đọc môi**.
 3. Cài **VietLip-1.10.5.apk** (build 30). Trong **Cài đặt → Quét QR máy chủ**, hướng camera vào mã trên PC. Nếu cần, nhập địa chỉ cùng cổng đang hiển thị trên PC. Mạng nội bộ phải cho phép điện thoại kết nối tới PC.

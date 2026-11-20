@@ -1,8 +1,10 @@
 # VietLip — sơ đồ project
 
 Mã ứng dụng đang bảo trì: `E:\Project\Lip_App\lip_reader`.
-Bộ bàn giao 1.10.5 nằm ngoài Git, gồm APK, EXE, hai tài liệu PDF và hai video.
-Các bản phân phối cũ được dọn sau khi kiểm chứng bản cuối; giữ biên nhận kiểm thử.
+Bộ bàn giao 1.10.5 nằm trong `Downloads\VietLip_1.10.5_Tron_bo`, gồm APK,
+EXE, hai tài liệu PDF và hai video. [Danh mục, mã SHA-256 và nguồn hai báo
+cáo](ban-giao-1.10.5/README.md) được lưu cùng mã ứng dụng. Thư mục `output`
+chỉ được tạo khi build cục bộ. Shortcut **Bo cai VietLip** mở bộ trong Downloads.
 Recipe đóng gói và kiểm tra: [MAINTENANCE.md](MAINTENANCE.md).
 
 | Thư mục | Dùng để làm gì |
