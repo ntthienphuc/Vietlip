@@ -58,7 +58,7 @@ class ReadingMethodSetting extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Khôi phục câu hiện bản gốc ở trên, kết quả AI ở dưới ngay trong phiên live.',
+          'Bật Kèm gợi ý câu để xem thêm một cách diễn đạt khi bạn ngừng nói.',
           style: TextStyle(color: AppColors.muted, fontSize: 13, height: 1.6),
         ),
       ],
@@ -78,7 +78,7 @@ class _MethodPickerState extends State<_MethodPicker> {
   bool _loading = true, _saving = false;
   String? _notice;
   late ReadingMethod _method = widget.settings.readingMethod;
-  late AiProvider _provider = widget.settings.aiProvider;
+  static const _provider = AiProvider.gemini;
 
   @override
   void initState() {
@@ -101,21 +101,11 @@ class _MethodPickerState extends State<_MethodPicker> {
     try {
       final result = await LipReaderApi(widget.settings).rewriteConfiguration();
       if (!mounted) return;
-      setState(() {
-        _configuration = result;
-        if (_providerInfo(_provider)?['configured'] != true) {
-          for (final candidate in AiProvider.values) {
-            if (_providerInfo(candidate)?['configured'] == true) {
-              _provider = candidate;
-              break;
-            }
-          }
-        }
-      });
+      setState(() => _configuration = result);
     } catch (_) {
       if (mounted) {
         setState(
-          () => _notice = 'Kết nối VietLip Server để kiểm tra dịch vụ AI.',
+          () => _notice = 'Kết nối VietLip Server để kiểm tra dịch vụ gợi ý câu.',
         );
       }
     } finally {
@@ -209,47 +199,21 @@ class _MethodPickerState extends State<_MethodPicker> {
                   ],
                   if (_method.usesAi) ...[
                     const SizedBox(height: 10),
-                    const Text(
-                      'Dịch vụ khôi phục',
-                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.auto_awesome_outlined),
+                      title: const Text('Gemini'),
+                      subtitle: Text(
+                        _loading
+                            ? 'Đang kiểm tra máy chủ…'
+                            : _providerInfo(_provider)?['configured'] == true
+                            ? 'Đã cấu hình trên máy tính'
+                            : 'Mở VietLip Server trên PC và chọn Cài đặt key Gemini.',
+                      ),
                     ),
                     const SizedBox(height: 8),
-                    for (final provider in AiProvider.values)
-                      Builder(
-                        builder: (context) {
-                          final info = _providerInfo(provider);
-                          final available = info?['configured'] == true;
-                          return ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                            ),
-                            enabled: available && !_saving,
-                            title: Text(provider.label),
-                            subtitle: Text(
-                              available
-                                  ? (info?['model_id']?.toString() ??
-                                        provider.subtitle)
-                                  : _loading
-                                  ? 'Đang kiểm tra…'
-                                  : 'Chưa cấu hình trên PC',
-                            ),
-                            trailing: Icon(
-                              _provider == provider && available
-                                  ? Icons.radio_button_checked
-                                  : Icons.radio_button_off,
-                              color: available
-                                  ? AppColors.primary
-                                  : AppColors.muted,
-                            ),
-                            onTap: available && !_saving
-                                ? () => setState(() => _provider = provider)
-                                : null,
-                          );
-                        },
-                      ),
-                    const SizedBox(height: 8),
                     const Text(
-                      'Mỗi câu đã chốt được gửi một lần. Chỉ văn bản đi tới dịch vụ AI. Bản khôi phục có thể sai ý.',
+                      'PC gửi phần chữ của từng câu đã chốt đến Gemini. Mô hình ngôn ngữ lớn (LLM) gợi ý cách diễn đạt tự nhiên hơn. Gợi ý có thể khác ý bạn.',
                       style: TextStyle(
                         color: AppColors.muted,
                         fontSize: 12,

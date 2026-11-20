@@ -9,7 +9,7 @@ class SettingsController extends ChangeNotifier {
   static const _providerKey = 'vietlip_ai_provider_v1';
   ReadingMethod _readingMethod = ReadingMethod.visual;
   ReadingMethod get readingMethod => _readingMethod;
-  AiProvider _aiProvider = AiProvider.groq;
+  AiProvider _aiProvider = AiProvider.gemini;
   AiProvider get aiProvider => _aiProvider;
 
   String _apiUrl = _defaultApiUrl;

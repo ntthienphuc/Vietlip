@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../theme/app_theme.dart';
+import '../../../shared/signova_style.dart';
 
 String liveStatusLabel(String state, String? decoderState) {
   final quality = switch (state) {
@@ -57,26 +58,22 @@ class LiveCaptionPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = unavailable ? const Color(0xFFFFB8AD) : AppColors.accent;
+    final accent = unavailable ? AppColors.error : AppColors.accent;
     final fixed = committed.isEmpty && provisional.isEmpty
         ? transcript
         : committed;
-    return Container(
+    return SignovaPanel(
       padding: const EdgeInsets.fromLTRB(20, 4, 14, 14),
-      decoration: BoxDecoration(
-        color: AppColors.caption,
-        borderRadius: BorderRadius.circular(24),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
+              SignovaIconBadge(
                 unavailable
                     ? Icons.info_outline
                     : Icons.closed_caption_outlined,
-                size: 18,
+                size: 28,
                 color: accent,
               ),
               const SizedBox(width: 8),
@@ -84,24 +81,12 @@ class LiveCaptionPanel extends StatelessWidget {
                 child: Text(
                   'Phụ đề trực tiếp',
                   style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
+                    color: AppColors.ink,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
                   ),
                 ),
               ),
-              if (captureFps != null ||
-                  elapsedMs != null ||
-                  unavailableWindows > 0)
-                IconButton(
-                  tooltip: 'Thông tin phiên',
-                  onPressed: () => _showDiagnostics(context),
-                  icon: const Icon(
-                    Icons.info_outline_rounded,
-                    size: 18,
-                    color: AppColors.captionMuted,
-                  ),
-                ),
               IconButton(
                 tooltip: 'Xem toàn bộ phụ đề',
                 onPressed: transcript.isEmpty
@@ -112,7 +97,7 @@ class LiveCaptionPanel extends StatelessWidget {
                   size: 17,
                   color: transcript.isEmpty
                       ? const Color(0xFF7383A2)
-                      : Colors.white,
+                      : AppColors.ink,
                 ),
               ),
             ],
@@ -149,11 +134,11 @@ class LiveCaptionPanel extends StatelessWidget {
                     ],
                   ),
                   style: TextStyle(
-                    fontSize: idle ? 25 : 24,
-                    height: 1.4,
+                    fontSize: idle ? 26 : 24,
+                    height: idle ? 1.3 : 1.4,
                     letterSpacing: -.6,
-                    fontWeight: FontWeight.w500,
-                    color: unavailable ? AppColors.captionMuted : Colors.white,
+                    fontWeight: idle ? FontWeight.w700 : FontWeight.w600,
+                    color: unavailable ? AppColors.captionMuted : AppColors.ink,
                   ),
                 ),
               ),
@@ -173,50 +158,12 @@ class LiveCaptionPanel extends StatelessWidget {
                   idle
                       ? 'Bắt đầu phiên để chuyển khẩu hình thành chữ.'
                       : status,
-                  style: TextStyle(fontSize: 11, height: 1.5, color: accent),
+                  style: TextStyle(fontSize: 12, height: 1.4, color: accent),
                 ),
               ),
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  void _showDiagnostics(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) => SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Thông tin phiên',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 16),
-              if (captureFps != null)
-                Text(
-                  'Camera: ${captureFps!.toStringAsFixed(0)} khung hình/giây',
-                ),
-              if (elapsedMs != null)
-                Text(
-                  'Xử lý cửa sổ ${(elapsedMs! / 1000).toStringAsFixed(1)} s',
-                ),
-              Text('$unavailableWindows lượt chưa đọc được'),
-              const SizedBox(height: 12),
-              const Text(
-                'Thời gian xử lý cửa sổ không phải tổng thời gian chờ phụ đề.',
-                style: TextStyle(color: AppColors.muted),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

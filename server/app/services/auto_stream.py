@@ -11,7 +11,7 @@ import os
 import time
 from fastapi import WebSocketDisconnect
 from .live_evidence import LiveEvidence, check_live_images
-from .realtime import decode_jpeg_frames
+from .realtime import LiveJpegDecoder, decode_jpeg_frames
 from .streaming_buffer import FrameBuffer, unpack_frame
 from .caption_stability import AgreementTimeline
 from .caption_delivery import CaptionDelivery
@@ -45,6 +45,7 @@ class AutoStream:
             start.get("rotation_degrees", 0),
             start.get("input_kind", "raw_face"),
         )
+        self.jpeg_decoder = LiveJpegDecoder(self.rotation, 360 if self.kind == "raw_face" else None)
         self.buffer = FrameBuffer(
             seconds=config.realtime_window_seconds + 2,
             max_frames=int(config.target_fps * (config.realtime_window_seconds + 2) * 2),
@@ -54,7 +55,8 @@ class AutoStream:
         self.render_receipts = start.get("caption_render_receipts") is True
         self.receipt_event = asyncio.Event()
         self.trace = LiveTrace()
-        self.detector, self.gate = VisualMotionDetector(self.kind), EndpointPolicy()
+        self.detector = VisualMotionDetector(self.kind)
+        self.gate = EndpointPolicy(silence_seconds=0.6) if self.kind == "raw_face" else EndpointPolicy()
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="lip-activity")
         self.event, self.send_lock = asyncio.Event(), asyncio.Lock()
         self.current, self.pending = None, deque()
@@ -192,7 +194,7 @@ class AutoStream:
                         self.finish_turn(
                             self.buffer.last_time + 1 / self.config.target_fps, "capture_gap"
                         )
-                    self.gate = EndpointPolicy()
+                    self.gate = EndpointPolicy(silence_seconds=self.gate.silence_seconds)
                 if self.state != last_state or time.monotonic() - last_heartbeat >= 1:
                     await self.send(dict(type="telemetry", **self.transport()))
                     last_state, last_heartbeat = self.state, time.monotonic()
@@ -288,13 +290,7 @@ class AutoStream:
                     if turn.last_key == key and turn.result is not None:
                         result = turn.result
                     else:
-                        rgb = await asyncio.to_thread(
-                            decode_jpeg_frames,
-                            frames,
-                            True,
-                            rotation_degrees=self.rotation,
-                            max_width=360 if self.kind == "raw_face" else None,
-                        )
+                        rgb = await asyncio.to_thread(self.jpeg_decoder.decode, frames)
                         await asyncio.to_thread(check_live_images, rgb, self.config.target_fps)
                         if self.confirmation is not None:
                             decision = await asyncio.get_running_loop().run_in_executor(

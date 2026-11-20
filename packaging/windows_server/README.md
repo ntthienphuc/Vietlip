@@ -1,6 +1,6 @@
 # VietLip Windows installer
 
-Current target: 1.10.1, Windows x64, native SO17, CPU/CUDA, local Wi-Fi/LAN.
+Current target: 1.10.5, Windows x64, native SO17, CPU/CUDA, local Wi-Fi/LAN.
 Python and all runtime dependencies are included. The user does not need Python,
 CUDA Toolkit, Flutter, a cloud account or an API key. A compatible NVIDIA driver
 is needed to use CUDA; CPU remains the fallback.
@@ -33,12 +33,10 @@ The source `tools/connect_android_usb.ps1` remains a historical developer tool;
 it is not shipped or used by the VietLip user workflow. Distribution uses LAN IP
 entry. See `README_INSTALL.txt` for the guide included in the installer.
 
-The old 1.1.0 scripts are archived under `packaging/legacy_windows_server_1_1`.
-
 The default remains SO17 visual recognition. Optional per-sentence AI recovery
-uses a PC-owned configuration outside the installation directory and preserves
+uses one Gemini key managed by the Windows launcher and preserves
 the original caption. See [method settings](../../docs/LIVE_AI_1_10.md).
-No provider key, gateway address or LLM weight is shipped in the installer.
+The launcher uses Google's Gemini generateContent endpoint. Windows DPAPI protects the active key for the current Windows user. Standard installers contain no credential. For a private handoff, pass `-IncludeSavedGeminiKey` to `build_installer.ps1`. The single Windows EXE then contains a recoverable shared key and must stay out of source control and public releases. The installer initializes an empty user profile before launching the server. Reinstallation preserves an existing key. Users can replace it in **Cài đặt key Gemini**. Android receives neither key. The desktop release is 1.10.5 and the frozen visual backend reports 1.10.1 in health.
 
 After removing the developer virtual environment, the preserved installed Python
 3.11 runtime can stage an update without downloading the model again:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections import OrderedDict
 from difflib import SequenceMatcher
 from dataclasses import dataclass, field
 from typing import Any
@@ -114,7 +115,7 @@ def decode_jpeg_frames(
     frames_rgb: list[Any] = []
     for payload in frame_payloads:
         encoded = np.frombuffer(payload, dtype=np.uint8)
-        frame_bgr = cv2.imdecode(encoded, cv2.IMREAD_COLOR)
+        frame_bgr = cv2.imdecode(encoded, cv2.IMREAD_COLOR) if encoded.size else None
         if frame_bgr is None:
             if strict:
                 raise VideoValidationError(
@@ -143,3 +144,39 @@ def decode_jpeg_frames(
             "Không giải mã được khung hình trực tiếp.",
         )
     return frames_rgb
+
+
+class LiveJpegDecoder:
+    """Reuse pixels across overlapping windows of one session's serial decoder."""
+
+    def __init__(self, rotation_degrees: int, max_width: int | None, max_bytes: int = 64 << 20):
+        self.rotation_degrees = rotation_degrees
+        self.max_width = max_width
+        self.max_bytes = max_bytes
+        self._frames: OrderedDict[bytes, Any] = OrderedDict()
+        self._bytes = 0
+
+    def decode(self, payloads: list[bytes]) -> list[Any]:
+        # Resolve the whole window before eviction so a miss cannot evict a later hit.
+        window = {payload: self._frames.get(payload) for payload in payloads}
+        missing = [payload for payload, frame in window.items() if frame is None]
+        if missing or not payloads:
+            decoded = decode_jpeg_frames(
+                missing, True, rotation_degrees=self.rotation_degrees, max_width=self.max_width
+            )
+            window.update(zip(missing, decoded, strict=True))
+
+        for payload in payloads:
+            if payload in self._frames:
+                self._frames.move_to_end(payload)
+                continue
+            frame = window[payload]
+            cost = len(payload) + frame.nbytes
+            if cost > self.max_bytes:
+                continue
+            while self._frames and self._bytes + cost > self.max_bytes:
+                old, image = self._frames.popitem(last=False)
+                self._bytes -= len(old) + image.nbytes
+            self._frames[payload] = frame
+            self._bytes += cost
+        return [window[payload] for payload in payloads]

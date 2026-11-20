@@ -2,12 +2,13 @@ param(
     [Parameter(Mandatory=$true)][string]$StageDirectory,
     [Parameter(Mandatory=$true)][string]$OutputDirectory,
     [switch]$SkipStage,
+    [switch]$IncludeSavedGeminiKey,
     [string]$InnoCompiler = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
 )
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
 $output = [IO.Path]::GetFullPath($OutputDirectory)
-if (Test-Path -LiteralPath (Join-Path $output 'VietLip-Server-Setup-1.10.1.exe')) {
+if (Test-Path -LiteralPath (Join-Path $output 'VietLip-Server-Setup-1.10.5.exe')) {
     throw 'Use a new output folder; the existing final installer is preserved.'
 }
 $python = Join-Path $repo 'server\.venv\Scripts\python.exe'
@@ -38,8 +39,10 @@ $internal = Join-Path (Split-Path -Parent $stage) ('inno-payload-' + [Guid]::New
 New-Item -ItemType Directory -Path $internal | Out-Null
 & $InnoCompiler "/DStageDir=$stage" "/DOutputDir=$internal" (Join-Path $PSScriptRoot 'VietLipServer.iss')
 if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed.' }
-& $runtime (Join-Path $PSScriptRoot 'package_installer.py') --payload $internal `
-    --output (Join-Path $output 'VietLip-Server-Setup-1.10.1.exe') `
-    --receipt (Join-Path (Split-Path -Parent $stage) 'INSTALLER_PACKAGE.json')
+$packageArgs = @((Join-Path $PSScriptRoot 'package_installer.py'), '--payload', $internal,
+    '--output', (Join-Path $output 'VietLip-Server-Setup-1.10.5.exe'),
+    '--receipt', (Join-Path (Split-Path -Parent $stage) 'INSTALLER_PACKAGE.json'))
+if ($IncludeSavedGeminiKey) { $packageArgs += '--with-saved-gemini-key' }
+& $runtime @packageArgs
 if ($LASTEXITCODE -ne 0) { throw 'Self-contained EXE packaging failed.' }
 Write-Host "Self-contained installer created in $output. No external .bin files are required."

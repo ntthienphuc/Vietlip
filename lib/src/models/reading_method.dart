@@ -1,15 +1,15 @@
 enum ReadingMethod {
   visual(
     'visual',
-    'Trực tiếp',
+    'Phụ đề trực tiếp',
     'Đọc môi theo thời gian thực',
-    'Ưu tiên live. Hiện phụ đề gốc, không chờ AI.',
+    'Xem phụ đề khi bạn nói. Máy tính đọc chuyển động môi qua camera.',
   ),
   recovery(
     'recovery',
-    'Khôi phục câu',
-    'Bản gốc + AI theo từng câu',
-    'Hiện lời đọc môi ngay. Khi bạn ngừng nói, AI khôi phục câu ở khung bên dưới.',
+    'Kèm gợi ý câu',
+    'Phụ đề và cách diễn đạt gợi ý',
+    'Xem thêm một cách diễn đạt bên dưới phụ đề gốc sau mỗi câu.',
   );
 
   const ReadingMethod(this.id, this.label, this.subtitle, this.description);
@@ -29,11 +29,12 @@ enum ReadingMethod {
 }
 
 enum AiProvider {
+  gemini('gemini', 'Gemini', 'Google Flash-Lite'),
   groq('groq', 'Groq', 'GPT-OSS 120B'),
   openrouter('openrouter', 'OpenRouter', 'Model miễn phí');
 
   const AiProvider(this.id, this.label, this.subtitle);
   final String id, label, subtitle;
   static AiProvider parse(String? id) =>
-      values.firstWhere((value) => value.id == id, orElse: () => groq);
+      values.firstWhere((value) => value.id == id, orElse: () => gemini);
 }

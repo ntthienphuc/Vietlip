@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
 
@@ -17,51 +18,59 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     final navigationShell = widget.navigationShell;
-    return Scaffold(
-      body: NotificationListener<CaptureSessionNotification>(
-        onNotification: (notification) {
-          if (_capturing != notification.active) {
-            setState(() => _capturing = notification.active);
-          }
-          return true;
-        },
-        child: CaptureVisibility(
-          active: navigationShell.currentIndex == 0,
-          child: navigationShell,
-        ),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: AppColors.canvas,
+        statusBarIconBrightness: Brightness.dark,
+        systemNavigationBarColor: Colors.white,
+        systemNavigationBarIconBrightness: Brightness.dark,
       ),
-      bottomNavigationBar: _capturing && navigationShell.currentIndex == 0
-          ? null
-          : DecoratedBox(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: AppColors.border)),
-              ),
-              child: NavigationBar(
-                selectedIndex: navigationShell.currentIndex,
-                onDestinationSelected: (index) => navigationShell.goBranch(
-                  index,
-                  initialLocation: index == navigationShell.currentIndex,
+      child: Scaffold(
+        body: NotificationListener<CaptureSessionNotification>(
+          onNotification: (notification) {
+            if (_capturing != notification.active) {
+              setState(() => _capturing = notification.active);
+            }
+            return true;
+          },
+          child: CaptureVisibility(
+            active: navigationShell.currentIndex == 0,
+            child: navigationShell,
+          ),
+        ),
+        bottomNavigationBar: _capturing && navigationShell.currentIndex == 0
+            ? null
+            : DecoratedBox(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  border: Border(top: BorderSide(color: AppColors.border)),
                 ),
-                destinations: const [
-                  NavigationDestination(
-                    icon: Icon(Icons.center_focus_weak_rounded),
-                    selectedIcon: Icon(Icons.center_focus_strong_rounded),
-                    label: 'Đọc môi',
+                child: NavigationBar(
+                  selectedIndex: navigationShell.currentIndex,
+                  onDestinationSelected: (index) => navigationShell.goBranch(
+                    index,
+                    initialLocation: index == navigationShell.currentIndex,
                   ),
-                  NavigationDestination(
-                    icon: Icon(Icons.history_outlined),
-                    selectedIcon: Icon(Icons.history),
-                    label: 'Lịch sử',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.tune_outlined),
-                    selectedIcon: Icon(Icons.tune),
-                    label: 'Cài đặt',
-                  ),
-                ],
+                  destinations: const [
+                    NavigationDestination(
+                      icon: Icon(Icons.center_focus_weak_rounded),
+                      selectedIcon: Icon(Icons.center_focus_strong_rounded),
+                      label: 'Đọc môi',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.history_outlined),
+                      selectedIcon: Icon(Icons.history),
+                      label: 'Lịch sử',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.tune_outlined),
+                      selectedIcon: Icon(Icons.tune),
+                      label: 'Cài đặt',
+                    ),
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 }

@@ -7,7 +7,7 @@ class TranscriptRewrite {
     this.message,
     this.elapsedMs = 0,
     this.startedAt,
-    this.provider = 'groq',
+    this.provider = 'gemini',
     this.sentenceId,
     this.code,
   });

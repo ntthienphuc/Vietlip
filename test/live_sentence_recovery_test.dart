@@ -17,7 +17,7 @@ LiveLipUpdate packet(String type, String text, [int? turn]) => LiveLipUpdate(
 );
 TranscriptRewrite response(String id, String text) => TranscriptRewrite(
   method: 'recovery',
-  provider: 'groq',
+  provider: 'gemini',
   sentenceId: id,
   status: 'completed',
   text: text,
@@ -31,7 +31,7 @@ void main() {
       final recovery = LiveSentenceRecovery(
         sessionId: 'live',
         method: ReadingMethod.recovery,
-        provider: AiProvider.groq,
+        provider: AiProvider.gemini,
         call: (text, id) async {
           calls.add(text);
           return response(id, text);
@@ -62,7 +62,7 @@ void main() {
       final recovery = LiveSentenceRecovery(
         sessionId: 'live',
         method: ReadingMethod.recovery,
-        provider: AiProvider.groq,
+        provider: AiProvider.gemini,
         call: (text, id) =>
             (replies[id] = Completer<TranscriptRewrite>()).future,
       );
@@ -97,7 +97,7 @@ void main() {
       final recovery = LiveSentenceRecovery(
         sessionId: 'live',
         method: ReadingMethod.visual,
-        provider: AiProvider.groq,
+        provider: AiProvider.gemini,
         call: (_, _) async {
           calls++;
           throw StateError('must not call');
@@ -122,7 +122,7 @@ void main() {
       final recovery = LiveSentenceRecovery(
         sessionId: 'live',
         method: ReadingMethod.recovery,
-        provider: AiProvider.groq,
+        provider: AiProvider.gemini,
         timeout: const Duration(milliseconds: 10),
         call: (_, id) {
           count++;
@@ -149,7 +149,7 @@ void main() {
       }).withSentences(recovery.sentences);
       final reopened = TranscriptionResult.fromJson(saved.toJson());
       expect(reopened.sentences[1].raw, 'hai');
-      expect(reopened.sentences[1].rewrite!.provider, 'groq');
+      expect(reopened.sentences[1].rewrite!.provider, 'gemini');
       recovery.dispose();
     },
   );
@@ -163,7 +163,7 @@ void main() {
     final recovery = LiveSentenceRecovery(
       sessionId: 'live',
       method: ReadingMethod.recovery,
-      provider: AiProvider.groq,
+      provider: AiProvider.gemini,
       call: (_, id) async => response(id, 'Bạn có thể giúp tôi được không?'),
     );
     recovery.accept(
@@ -187,7 +187,7 @@ void main() {
               child: Scaffold(
                 body: LiveCaptureLayout(
                   recovery: true,
-                  header: const Text('Khôi phục câu'),
+                  header: const Text('Kèm gợi ý câu'),
                   preview: const ColoredBox(color: Colors.black),
                   controls: FilledButton(
                     onPressed: () {},
@@ -196,7 +196,7 @@ void main() {
                   captions: SentenceCaptionPanel(
                     sentences: recovery.sentences,
                     draft: '',
-                    provider: AiProvider.groq,
+                    provider: AiProvider.gemini,
                     status: 'Sẵn sàng',
                   ),
                 ),
@@ -206,7 +206,8 @@ void main() {
         );
         await tester.pump();
         expect(tester.takeException(), isNull, reason: '$size / $scale');
-        expect(find.text('AI KHÔI PHỤC'), findsOneWidget);
+        expect(find.text('GỢI Ý CÂU'), findsOneWidget);
+        expect(find.textContaining(RegExp(r'^\d+\.\d+ s$')), findsNothing);
         expect(find.text('Bạn có thể giúp tôi được không?'), findsOneWidget);
       }
     }

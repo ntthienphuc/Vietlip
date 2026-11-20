@@ -1,110 +1,31 @@
-# VietLip 1.10.1
+# VietLip 1.10.5
 
-Ứng dụng Android đọc môi tiếng Việt qua camera, kết nối không dây tới server
-Windows trong cùng mạng nội bộ. Server hiển thị IP; người dùng nhập IP trong
-**Cài đặt → Lưu và kiểm tra**. Phụ đề live chỉ dùng hình ảnh. Video lưu có âm
-thanh để đối chiếu khi thử nghiệm.
+VietLip hiển thị phụ đề tiếng Việt từ khẩu hình. Điện thoại Android gửi hình camera qua Wi-Fi/LAN đến VietLip Server trên Windows. Máy chủ chạy SO17 cục bộ. Nếu người dùng bật **Kèm gợi ý câu**, PC gửi văn bản đã chốt đến Google Gemini 3.1 Flash-Lite. Ứng dụng hiển thị phụ đề gốc và gợi ý ở hai dòng riêng.
 
-**Bộ cài hiện tại:** `output/VietLip-Final` — gồm đúng hai file:
-`VietLip-1.10.1.apk` và `VietLip-Server-Setup-1.10.1.exe`. EXE chứa đầy đủ
-runtime và mô hình; mở trực tiếp để cài, không cần ZIP hoặc BIN đi kèm.
-Cần khoảng 6 GB cho bản Windows đã cài và thêm khoảng 3,5 GB trống ở ổ chứa
-thư mục tạm khi mở EXE; dữ liệu giải nén tạm được dọn khi đóng bộ cài.
+## Cài đặt và sử dụng
 
-Mặc định **Trực tiếp — SO17** để ưu tiên live. Trong Cài đặt có thêm các phương pháp
-Khôi phục câu qua Groq hoặc OpenRouter ngay trong phiên, theo từng câu. Bản AI nằm riêng; phụ đề
-gốc vẫn được lưu và hiển thị. Phương pháp AI cần cấu hình endpoint trên PC.
-Xem [cách dùng và cấu hình](docs/LIVE_AI_1_10.md).
-
-## Dùng bộ cài
-
-1. Chạy `VietLip-Server-Setup-1.10.1.exe`. Bộ cài có sẵn Python, thư viện
-   CPU/CUDA và checkpoint SO17.
+1. Trên Windows 10/11 x64, chạy **VietLip-Server-Setup-1.10.5.exe**. Dành khoảng 6 GB cho ứng dụng và thêm 3,5 GB trên ổ chứa thư mục tạm. Bộ cài mang theo Python, runtime và mô hình. Server tự dùng GPU NVIDIA khi CUDA khả dụng hoặc dùng CPU.
 2. Mở **VietLip Server** từ Start Menu và chờ **Sẵn sàng đọc môi**.
-3. Cài `VietLip-1.10.1.apk` đi kèm riêng lên Android. Cập nhật trực tiếp để giữ
-   lịch sử trên thiết bị.
-4. PC và điện thoại kết nối cùng mạng Wi-Fi/LAN có cho phép liên lạc giữa
-   thiết bị. Nhập IP server trong app, kiểm tra, rồi **Bắt đầu đọc môi**.
+3. Cài **VietLip-1.10.5.apk** (build 30). Trong **Cài đặt → Quét QR máy chủ**, hướng camera vào mã trên PC. Nếu cần, nhập địa chỉ cùng cổng đang hiển thị trên PC. Mạng nội bộ phải cho phép điện thoại kết nối tới PC.
+4. Trên điện thoại, chạm **Bắt đầu đọc môi**. Giữ mặt rõ, gần chính diện và có đủ ánh sáng. Sau khi nói xong, chờ phụ đề cuối rồi chạm **Kết thúc phiên**. Có thể xuất video ở **Lịch sử → Lưu video ra máy**.
 
-Mạng khách có thể tách thiết bị dù cùng SSID. Nếu kết nối thất bại, kiểm tra IP,
-cổng 7100, quyền mạng của server và cấu hình router. Không cần tài khoản cloud
-hay LLM/API key. Xem hướng dẫn trong
-[`packaging/windows_server/README_INSTALL.txt`](packaging/windows_server/README_INSTALL.txt).
+**Gemini.** Bản cài nội bộ có thể cấp sẵn key khi cài mới. Để thay key, mở **VietLip Server → Cài đặt key Gemini** trên Windows, nhập key mới và lưu. Cài lại giữ key hiện tại của tài khoản Windows. Chọn **Kèm gợi ý câu → Áp dụng** trên điện thoại. Chế độ **Phụ đề trực tiếp** dùng được khi PC chỉ có kết nối LAN.
 
-## Giao diện và hành vi
+## Mã nguồn
 
-- Tên và biểu tượng VietLip; nền sáng, xanh ngọc, typography Nunito thống nhất.
-- Khung “Phụ đề trực tiếp” luôn nằm ngay dưới preview từ màn hình đầu. Trước khi bắt đầu có hướng dẫn ngắn; khi đọc môi, chữ hiện trong khung này.
-- Nút bắt đầu/kết thúc cố định, dễ chạm; trạng thái máy chủ được kiểm tra thật và có lối vào Cài đặt.
-- Ảnh dùng tỷ lệ gốc và `BoxFit.contain`, không bóp mặt; guide theo vùng hình.
-- Phụ đề có vùng riêng, chữ lớn, phần tạm gạch dưới. Mở rộng để xem/sao chép
-  toàn phiên. Điều hướng ẩn khi đang live.
-- Tự theo dõi chuyển động môi và khoảng ngừng để chốt đoạn. Nhai/cười vẫn có
-  thể bị nhầm thành hoạt động nói; phụ đề tự động cần kiểm tra.
-- Cài đặt nhận IP có hoặc không có `http://`; mặc định cổng 7100. Nút kiểm
-  tra có thời hạn chờ, server chỉ báo sẵn sàng khi mô hình đã chuẩn bị xong.
-- Lịch sử cục bộ tự cập nhật; chữ lớn/màn hình nhỏ có thể cuộn.
-- Lịch sử → chọn phiên → Lưu video ra máy để xuất MP4 có tiếng. Camera đã dừng
-  vẫn giữ vùng phụ đề cho tới khi server gửi và app dựng xong phần cuối.
-- Nhãn phiên bản trong Cài đặt đọc trực tiếp từ gói Android đã cài.
+| Thành phần | Đường dẫn |
+| --- | --- |
+| Giao diện, camera và lịch sử trên điện thoại | [lib](lib), [android](android), [CameraX adapter](packages/camera_android_camerax) |
+| Nhận dạng, WebSocket và gợi ý câu | [server/app](server/app) |
+| Cửa sổ máy chủ và ghép QR | [desktop_launcher.py](server/desktop_launcher.py) |
+| Tạo APK và EXE | [build_android.ps1](build_android.ps1), [đóng gói Windows](packaging/windows_server/README.md) |
+| Kiểm thử | [Flutter](test), [server](server/tests), [bộ cài](packaging/windows_server/tests) |
 
-## Mô hình và giới hạn
+Bộ nhận dạng dùng SO17 FP32, beam 3, trọng số CTC 0,1, cửa sổ tối đa 6 giây. Tốc độ thực tế phụ thuộc camera, mạng và PC. Tiếng trong bản ghi phục vụ nghe lại. Người dùng cần xác nhận các phụ đề quan trọng.
 
-Giữ **SO17 native, float32, beam 3 / CTC 0.1, 25 fps, cửa sổ 6 giây và bước
-1,5 giây**. Nhận dạng live dùng SO17; AI tùy chọn khôi phục từng câu đã chốt và hiển thị cùng bản gốc ngay trong phiên.
-Các tài liệu thử nghiệm cũ được giữ để đối chiếu.
+## Phát triển và bàn giao
 
-Ứng dụng vẫn là bản thử nghiệm, **chưa đạt độ chính xác cao với câu nói tự do**.
-Bốn lượt camera Wi-Fi ngày 16/11, cùng người nói và cùng 10 câu mỗi lượt, có
-WER gộp 47,5% ở bản gốc, 48,0% với Groq và 43,5% với OpenRouter. Đây là mẫu
-nhỏ, chưa đại diện cho người nói/câu tự do; LLM vẫn có thể sửa sai ý.
-Xem [phạm vi và kết quả kiểm chứng 1.10](docs/RELEASE_1_10_2026-11-16.md).
-Vòng tám phiên đoạn văn tiếp theo có WER ước lượng theo chép âm thanh cục bộ
-57,88% ở bản gốc và 61,41% với Groq. Người dùng có vấp/đổi từ nên nhãn ASR này
-chưa phải tham chiếu kiểm nghe hoàn chỉnh. [Báo cáo và quyết định giữ cấu hình](docs/PARAGRAPH_BENCHMARK_2026-11-16.md).
-Đóng gói và đổi UI không phải cải thiện độ chính xác. GPU được ưu tiên; CPU chạy được nhưng
-không bảo đảm realtime. Android đã được build/test; chưa kiểm chứng iPhone.
-
-Bộ lọc CNN giữ được các câu thử và giảm chữ sinh thêm ở một replay im lặng;
-chưa bật mặc định vì chưa có bằng chứng cải thiện live trên nhiều bối cảnh.
-Xem [kết quả và giới hạn của phiên mới](docs/VISUAL_CONFIRMATION_AND_SCENE04_2026-11-10.md).
-Các phép thử checkpoint và nhánh âm vị vẫn ủng hộ giữ SO17. Độ trễ 2–3 giây
-là mục tiêu, chưa phải bảo đảm cho mọi câu và cấu hình.
-
-Đã kiểm thêm hướng ảnh và cách chấm đáp án trên 209 cửa sổ của tám video.
-Các biến thể gây hồi quy hoặc không giảm tổng lỗi và tăng thời gian xử lý;
-[kết quả đối chiếu](docs/ORIENTATION_AUDIT_2026-11-10.md) giữ nguyên cấu hình
-và bộ cài hiện tại. Đây là điểm chốt của đợt tối ưu với dữ liệu đang có.
-
-## Bảo trì
-
-- [Bộ cài cuối, cài sạch, kiểm điện thoại và biên nhận dọn máy](docs/FINAL_DELIVERY_2026-11-16.md).
-- [Kiểm tra code, gói hai file và quy tắc lưu trữ](docs/MAINTENANCE.md).
-- [UI/UX 1.8.0 và kiểm chứng trên điện thoại](UI_UX_POLISH_REPORT.md).
-- [AI theo từng câu và kiểm chứng 1.10.1](docs/RELEASE_1_10_2026-11-16.md).
-- [Tám phiên đoạn văn: so cửa sổ, ngắt đoạn và LLM](docs/PARAGRAPH_BENCHMARK_2026-11-16.md).
-- [Thử sửa transcript bằng LLM lớn: kết quả và giới hạn](docs/LLM_REWRITE_2026-11-15.md).
-- [Kiểm dữ liệu local, ba mô hình thị giác và phép thử LLM mở rộng](docs/LLM_EXPANSION_2026-11-15.md).
-- [Sơ đồ thư mục và cách tạo bộ cài](docs/PROJECT_MAP.md).
-- [Kiến trúc ứng dụng/server](docs/ARCHITECTURE.md).
-- [Bằng chứng bộ cài VietLip 1.6.0 trước đây](docs/RELEASE_1_6_0_2026-11-09.md).
-- [Kiểm chứng bộ cài VietLip 1.6.3](docs/RELEASE_1_6_3_2026-11-10.md).
-- [So sánh cùng cửa sổ và phụ đề trên điện thoại](docs/FROZEN_WIFI_CAPTIONS_2026-11-10.md).
-- [Chọn checkpoint](docs/CHECKPOINT_SELECTION_2026-11-09.md).
-- [Bản 1.5 và các phép đo phụ đề](docs/RELEASE_1_5_0_2026-11-09.md).
-
-Chạy từ source đã chuẩn bị: `server/run_realtime.ps1`. Build Android có ký:
-`build_android.ps1 -Mode release`. Build installer và kiểm tra runtime theo
-`packaging/windows_server/README.md`. Không đưa model, khóa ký, video hay thư
-mục build vào Git. Mã nguồn của bên thứ ba và license được giữ cùng project.
-
-Các bộ cài cũ và cache build được dọn sau khi kiểm chứng bản cuối. Video,
-bằng chứng, model và thử nghiệm được giữ để đối chiếu; chúng không nằm trong
-bộ cài người dùng. Script bộ cài 1.1 cũ ở `packaging/legacy_windows_server_1_1`.
-
-## UI/UX 1.7.0
-
-Xem [audit](UI_UX_AUDIT.md) và [báo cáo thay đổi, kiểm thử](UI_UX_POLISH_REPORT.md).
-Ở bản 1.7 đã gỡ lựa chọn chế độ/ngữ cảnh/LLM; giữ một luồng nhận dạng hình ảnh. Lịch sử cũ
-vẫn đọc được và hiển thị phụ đề thị giác gốc. Các endpoint upload/jobs/WebSocket
-giữ đường dẫn; API 1.3.0 chỉ nhận `mode=visual_only`.
+- Flutter dùng `flutter analyze` và `flutter test`. Với bản release, dùng `build_android.ps1 -Mode release` cùng cấu hình ký cục bộ.
+- Bản Windows dùng [quy trình đóng gói](packaging/windows_server/README.md). Theo mặc định builder tạo bản không kèm key. Switch `-IncludeSavedGeminiKey` chỉ dành cho bàn giao nội bộ vì người nhận EXE có thể trích key và sử dụng hạn mức chung.
+- Model, key, APK/EXE, video riêng và tệp build được quản lý ngoài Git. Giấy phép đi kèm thư viện nằm trong [thư mục vendor](server/vendor). Bộ cài hiện dành cho thử nghiệm nội bộ.
+- Xem [kiến trúc](docs/ARCHITECTURE.md), [hành vi gợi ý theo câu](docs/LIVE_AI_1_10.md) và [sơ đồ project](docs/PROJECT_MAP.md).

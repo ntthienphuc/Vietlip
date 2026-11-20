@@ -8,12 +8,12 @@
 [Setup]
 AppId=VietLip.Server
 AppName=VietLip Server
-AppVersion=1.10.1
+AppVersion=1.10.5
 AppPublisher=VietLip
 DefaultDirName={localappdata}\Programs\VietLip Server
 DefaultGroupName=VietLip
 OutputDir={#OutputDir}
-OutputBaseFilename=VietLip-Server-Setup-1.10.1
+OutputBaseFilename=VietLip-Server-Setup-1.10.5
 SetupIconFile={#StageDir}\VietLip.ico
 UninstallDisplayIcon={app}\VietLip.ico
 PrivilegesRequired=lowest
@@ -34,6 +34,7 @@ Name: desktopicon; Description: "Create a desktop shortcut"; Flags: unchecked
 
 [Files]
 Source: "{#StageDir}\*"; DestDir: "{app}"; Excludes: "*.pyc,*.pyo,__pycache__"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{src}\gemini-default.dpapi"; DestDir: "{localappdata}\VietLip"; DestName: "gemini.dpapi"; Flags: external skipifsourcedoesntexist onlyifdoesntexist uninsneveruninstall
 
 [InstallDelete]
 Type: files; Name: "{app}\server\app\services\llm_postprocessor.py"

@@ -8,7 +8,7 @@ from app.version import APP_VERSION
 import desktop_runtime
 
 
-def test_mobile_health_desktop_and_installer_share_product_version():
+def test_companion_matches_installer_and_checks_the_bundled_engine_health_version():
     root = Path(__file__).parents[2]
     mobile = re.search(r"^version: ([\d.]+)\+", (root / "pubspec.yaml").read_text(), re.M)[1]
     installer = re.search(
@@ -16,5 +16,6 @@ def test_mobile_health_desktop_and_installer_share_product_version():
         (root / "packaging/windows_server/VietLipServer.iss").read_text(),
         re.M,
     )[1]
-    assert mobile == installer == APP_VERSION == desktop_runtime.APP_VERSION
+    assert mobile == installer == desktop_runtime.DESKTOP_VERSION
+    assert APP_VERSION == desktop_runtime.APP_VERSION
     assert HealthResponse.model_fields["app_version"].default == APP_VERSION

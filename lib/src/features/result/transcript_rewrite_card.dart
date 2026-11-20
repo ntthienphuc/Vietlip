@@ -64,7 +64,7 @@ class _TranscriptRewriteCardState extends State<TranscriptRewriteCard> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    review.pending ? 'AI đang xem lại câu…' : 'Đề xuất AI',
+                    review.pending ? 'Đang soạn gợi ý…' : 'Gợi ý câu',
                     style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 17,
@@ -99,41 +99,29 @@ class _TranscriptRewriteCardState extends State<TranscriptRewriteCard> {
                   await Clipboard.setData(ClipboardData(text: review.text));
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Đã sao chép bản AI')),
+                      const SnackBar(content: Text('Đã sao chép gợi ý')),
                     );
                   }
                 },
                 icon: const Icon(Icons.copy_outlined, size: 18),
-                label: const Text('Sao chép bản AI'),
+                label: const Text('Sao chép gợi ý'),
               ),
               const SizedBox(height: 8),
               Text(
                 review.status == 'unchanged'
-                    ? 'AI giữ nguyên nội dung. Hãy đối chiếu với bản gốc.'
-                    : 'AI có thể đổi ý câu nói. Hãy đối chiếu với bản gốc.',
+                    ? 'Gợi ý trùng với phụ đề gốc.'
+                    : 'Đối chiếu gợi ý với phụ đề gốc để kiểm tra ý câu nói.',
                 style: const TextStyle(
                   color: AppColors.muted,
                   fontSize: 13,
                   height: 1.5,
                 ),
               ),
-              if (review.modelId != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: Text(
-                    '${review.modelId} · ${(review.elapsedMs / 1000).toStringAsFixed(1)} giây',
-                    style: const TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
             ] else
               Text(
                 review.pending
-                    ? 'Bạn có thể rời màn hình này. Bản sửa sẽ được cập nhật trong Lịch sử; bản gốc đã lưu.'
-                    : review.message ??
-                          'AI chưa hoàn tất. Bản phụ đề gốc đã được giữ lại.',
+                    ? 'Phụ đề gốc đã lưu. Bạn có thể xem lại gợi ý trong Lịch sử.'
+                    : 'Chưa có gợi ý cho câu này. Bạn vẫn có thể xem phụ đề gốc.',
                 style: const TextStyle(color: AppColors.muted, height: 1.5),
               ),
           ],

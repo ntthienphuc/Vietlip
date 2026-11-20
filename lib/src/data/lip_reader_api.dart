@@ -50,7 +50,7 @@ class LipReaderApi {
   Future<TranscriptRewrite> rewrite(
     String text,
     ReadingMethod method, {
-    AiProvider provider = AiProvider.groq,
+    AiProvider provider = AiProvider.gemini,
     String? sentenceId,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(

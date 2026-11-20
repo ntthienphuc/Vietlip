@@ -14,8 +14,8 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("VietLip Server Setup")]
 [assembly: AssemblyProduct("VietLip Server")]
-[assembly: AssemblyVersion("1.10.1.0")]
-[assembly: AssemblyFileVersion("1.10.1.0")]
+[assembly: AssemblyVersion("1.10.5.0")]
+[assembly: AssemblyFileVersion("1.10.5.0")]
 
 internal sealed class PayloadFile {
     internal string Name, Hash;
@@ -137,6 +137,19 @@ internal static class Installer {
             if(verify) { Log("Verification passed."); return 0; }
             if(cancelled()) throw new OperationCanceledException();
             progress(100,"install");
+            // Only internal installers carry this optional PE resource. Seal it for
+            // the receiving Windows user before handing it to the inner setup.
+            using (var seed=Assembly.GetExecutingAssembly().GetManifestResourceStream("VietLip.DefaultGemini")) {
+                if (seed!=null) {
+                    using (var reader=new BinaryReader(seed)) {
+                        byte[] clear=reader.ReadBytes(checked((int)seed.Length));
+                        try {
+                            byte[] sealedKey=ProtectedData.Protect(clear,null,DataProtectionScope.CurrentUser);
+                            File.WriteAllBytes(Path.Combine(work,"gemini-default.dpapi"),sealedKey);
+                        } finally { Array.Clear(clear,0,clear.Length); }
+                    }
+                }
+            }
             string setup=Path.Combine(work,Files.Single(f=>f.Name.EndsWith(".exe",StringComparison.OrdinalIgnoreCase)).Name);
             var start=new System.Diagnostics.ProcessStartInfo(setup,String.Join(" ",args.Select(Quote))) {
                 WorkingDirectory=work, UseShellExecute=false

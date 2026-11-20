@@ -80,7 +80,7 @@ def main():
     server.mkdir()
     for directory in ("app", "vendor", "assets"):
         copy_tree(REPO / "server" / directory, server / directory)
-    for name in ("desktop_launcher.py", "desktop_runtime.py", "check_runtime.py",
+    for name in ("desktop_launcher.py", "desktop_runtime.py", "desktop_gemini.py", "desktop_secrets.py", "desktop_qr.py", "check_runtime.py",
                  "requirements-local-verified.txt"):
         shutil.copy2(REPO / "server" / name, server / name)
     (server / "models").mkdir()
@@ -95,7 +95,7 @@ def main():
     entries = [{"path": str(path.relative_to(output)).replace("\\", "/"),
                 "bytes": path.stat().st_size, "sha256": sha256(path)}
                for path in sorted(output.rglob("*")) if path.is_file()]
-    manifest = {"app": "VietLip Server", "version": "1.10.1", "created": time.time(),
+    manifest = {"app": "VietLip Server", "version": "1.10.5", "created": time.time(),
                 "files": entries, "total_bytes": sum(item["bytes"] for item in entries)}
     (output / "PAYLOAD_MANIFEST.json").write_text(json.dumps(manifest, indent=2), encoding="utf8")
     print(json.dumps({"files": len(entries), "bytes": manifest["total_bytes"],

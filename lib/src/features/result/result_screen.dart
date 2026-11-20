@@ -97,7 +97,7 @@ class _ResultContent extends StatelessWidget {
                           fontSize: 26,
                           height: 1.5,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: AppColors.ink,
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -112,7 +112,7 @@ class _ResultContent extends StatelessWidget {
                       else
                         OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.white,
+                            foregroundColor: AppColors.primary,
                             side: const BorderSide(color: Color(0xFF627393)),
                           ),
                           onPressed: () async {
@@ -141,7 +141,7 @@ class _ResultContent extends StatelessWidget {
               ],
               if (result.sentences.any((s) => s.rewrite != null)) ...[
                 const Text(
-                  'Khôi phục theo từng câu',
+                  'Gợi ý theo từng câu',
                   style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 12),

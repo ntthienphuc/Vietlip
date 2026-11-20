@@ -8,16 +8,16 @@ import os
 from pathlib import Path
 import time
 from typing import Literal
-import urllib.parse
 
 from fastapi import APIRouter
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 from .live_trace import LiveTrace
+from . import gemini
 from ..version import APP_VERSION
 
 Method = Literal["visual", "recovery"]
-Provider = Literal["groq", "openrouter"]
+Provider = Literal["gemini"]
 PROMPTS = {
     "direct": (
         "Bạn khôi phục lời nói tiếng Việt từ văn bản của mô hình đọc khẩu hình "
@@ -34,13 +34,13 @@ class RewriteRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     text: str = Field(max_length=4000)
     method: Method
-    provider: Provider = "groq"
+    provider: Provider = "gemini"
     sentence_id: str | None = Field(default=None, max_length=120)
 
 
 class RewriteResponse(BaseModel):
     method: Method
-    provider: Provider = "groq"
+    provider: Provider = "gemini"
     sentence_id: str | None = None
     text: str
     status: Literal["completed", "unchanged", "unavailable"]
@@ -62,6 +62,7 @@ class TranscriptRewriter:
         self.path = path or configuration_path()
         self.timeout = timeout
         self._active = 0
+        self._billing_retry_at = 0.0
         self._requests: dict[tuple[str, str], tuple[str, float, asyncio.Task]] = {}
         self._trace = LiveTrace(prefix="ai")
 
@@ -74,42 +75,18 @@ class TranscriptRewriter:
             return {}
 
     @staticmethod
-    def _configured(provider, provider_id: str = "groq") -> bool:
-        if not isinstance(provider, dict) or provider.get("enabled", True) is not True:
-            return False
-        endpoint, model = provider.get("endpoint", ""), provider.get("model", "")
-        if not isinstance(endpoint, str) or not isinstance(model, str) or not model.strip():
-            return False
-        if provider_id == "openrouter" and not model.endswith(":free"):
-            return False
-        try:
-            url = urllib.parse.urlsplit(endpoint)
-            return (
-                url.scheme in {"http", "https"}
-                and bool(url.hostname)
-                and not url.username
-                and not url.password
-                and not url.fragment
-                and not url.query
-            )
-        except ValueError:
-            return False
+    def _configured(provider) -> bool:
+        return (isinstance(provider, dict) and provider.get("enabled", True) is True
+                and isinstance(provider.get("model"), str) and provider["model"] in gemini.THINKING)
 
     def methods(self) -> dict:
-        providers = self._providers()
-        available = [
-            {
-                "id": name,
-                "configured": self._configured(providers.get(name), name),
-                "model_id": str(providers.get(name, {}).get("model", ""))
-                if isinstance(providers.get(name), dict)
-                else "",
-            }
-            for name in ("groq", "openrouter")
-        ]
+        provider = self._providers().get("gemini")
+        configured = self._configured(provider)
+        available = [{"id": "gemini", "configured": configured,
+                      "model_id": provider["model"] if configured else ""}]
         return {
             "default_method": "visual",
-            "default_provider": "groq",
+            "default_provider": "gemini",
             "phase": "per_sentence",
             "methods": [
                 {"id": "visual", "configured": True},
@@ -145,13 +122,16 @@ class TranscriptRewriter:
                 )
             return await asyncio.shield(task)
         provider = self._providers().get(request.provider)
-        if not self._configured(provider, request.provider):
+        if not self._configured(provider):
             return RewriteResponse(
                 **base,
                 status="unavailable",
                 code="not_configured",
                 message="Dịch vụ AI này chưa được cấu hình trên máy tính.",
             )
+        if now < self._billing_retry_at:
+            return RewriteResponse(**base, status="unavailable", code="billing_required",
+                                   message="Project Gemini đã hết tín dụng. Kiểm tra Google AI Studio trên PC.")
         if self._active >= 2:
             return RewriteResponse(
                 **base,
@@ -197,6 +177,9 @@ class TranscriptRewriter:
 
     @staticmethod
     def _key(provider: dict) -> str:
+        if provider.get("credential_store") == "windows_dpapi":
+            from desktop_gemini import saved_key
+            return saved_key()
         if provider.get("api_key_file"):
             path = Path(provider["api_key_file"])
             values = json.loads(path.read_text(encoding="utf-8-sig"))
@@ -214,37 +197,18 @@ class TranscriptRewriter:
         code = "provider_error"
         message = "AI chưa hoàn tất. Câu gốc đã được giữ lại."
         try:
-            payload = {
-                "model": provider["model"],
-                "temperature": 0,
-                "max_tokens": 1024,
-                "messages": [
-                    {"role": "system", "content": PROMPTS["direct"]},
-                    {
-                        "role": "user",
-                        "content": json.dumps({"text": request.text}, ensure_ascii=False),
-                    },
-                ],
-            }
-            if request.provider == "groq":
-                payload["reasoning_effort"] = provider.get("reasoning_effort", "low")
-            else:
-                payload["reasoning"] = {
-                    "effort": provider.get("reasoning_effort", "none"),
-                    "exclude": True,
-                }
-                # Never route to a paid variant or a paid fallback.
-                payload["provider"] = {
-                    "allow_fallbacks": False,
-                    "max_price": {"prompt": 0, "completion": 0},
-                }
+            model = provider["model"]
+            payload = gemini.payload(request.text, model)
+            endpoint = f"{gemini.API_ROOT}/{model}:generateContent"
             headers = {"Content-Type": "application/json", "User-Agent": f"VietLip/{APP_VERSION}"}
             key = self._key(provider)
-            if key:
-                headers["Authorization"] = "Bearer " + key
+            if not key:
+                return RewriteResponse(**base, status="unavailable", code="not_configured",
+                                       message="Thêm key Gemini trong VietLip Server trên PC.")
+            headers["x-goog-api-key"] = key
             async with httpx.AsyncClient(timeout=self.timeout, trust_env=False) as client:
                 async with client.stream(
-                    "POST", provider["endpoint"], headers=headers, json=payload
+                    "POST", endpoint, headers=headers, json=payload
                 ) as response:
                     response.raise_for_status()
                     response_bytes = bytearray()
@@ -253,24 +217,19 @@ class TranscriptRewriter:
                         if len(response_bytes) > 256 * 1024:
                             raise ValueError("oversized response")
                 result = json.loads(response_bytes)
-            choice = result["choices"][0]
-            text = choice["message"]["content"]
-            if (
-                choice.get("finish_reason") != "stop"
-                or not isinstance(text, str)
-                or not text.strip()
-                or len(text) > 8000
-            ):
-                raise ValueError("incomplete response")
-            text = text.strip()
+            text = gemini.response_text(result)
             return RewriteResponse(
                 **{**base, "text": text},
                 status="unchanged" if text == request.text else "completed",
-                model_id=str(result.get("model") or provider["model"]),
+                model_id=str(result.get("modelVersion") or model),
                 elapsed_ms=round((time.monotonic() - start) * 1000),
             )
         except httpx.HTTPStatusError as error:
-            if error.response.status_code == 429:
+            if error.response.status_code == 402:
+                self._billing_retry_at = time.monotonic() + 60
+                code = "billing_required"
+                message = "Project Gemini đã hết tín dụng. Kiểm tra Google AI Studio trên PC."
+            elif error.response.status_code == 429:
                 code, message = (
                     "rate_limited",
                     "AI đã chạm hạn mức. Câu gốc vẫn hiển thị; hãy thử lại sau.",

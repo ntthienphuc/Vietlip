@@ -9,6 +9,7 @@ import socket
 import urllib.request
 from app.version import APP_VERSION as APP_VERSION
 
+DESKTOP_VERSION = "1.10.5"
 APP_NAME = "VietLip Server"
 ROOT = Path(__file__).resolve().parent
 
@@ -86,6 +87,9 @@ def local_ipv4() -> str:
 def local_addresses(port: int) -> list[str]:
     import ipaddress
 
+    lan_networks = tuple(
+        ipaddress.IPv4Network(value) for value in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")
+    )
     preferred = local_ipv4()
     candidates = [preferred]
     try:
@@ -98,6 +102,6 @@ def local_addresses(port: int) -> list[str]:
     for value in candidates:
         ip = ipaddress.ip_address(value)
         url = f"http://{ip}:{port}"
-        if ip.is_private and not ip.is_loopback and not ip.is_link_local and url not in addresses:
+        if any(ip in network for network in lan_networks) and url not in addresses:
             addresses.append(url)
     return addresses

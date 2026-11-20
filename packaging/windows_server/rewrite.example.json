@@ -1,18 +1,9 @@
 {
   "providers": {
-    "groq": {
+    "gemini": {
       "enabled": false,
-      "endpoint": "https://api.groq.com/openai/v1/chat/completions",
-      "model": "openai/gpt-oss-120b",
-      "api_key_env": "GROQ_API_KEY",
-      "reasoning_effort": "low"
-    },
-    "openrouter": {
-      "enabled": false,
-      "endpoint": "https://openrouter.ai/api/v1/chat/completions",
-      "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
-      "api_key_env": "OPENROUTER_API_KEY",
-      "reasoning_effort": "none"
+      "model": "gemini-3.1-flash-lite",
+      "credential_store": "windows_dpapi"
     }
   }
 }

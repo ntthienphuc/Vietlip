@@ -4,6 +4,7 @@ import '../../models/live_sentence.dart';
 import '../../models/reading_method.dart';
 import '../../data/live_sentence_recovery.dart';
 import '../../theme/app_theme.dart';
+import '../../../shared/signova_style.dart';
 
 /// Each raw/AI pair moves together. A late response never replaces a newer turn.
 class SentenceCaptionPanel extends StatelessWidget {
@@ -25,36 +26,32 @@ class SentenceCaptionPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pending = sentences.where((s) => s.pending).length;
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.caption,
-        borderRadius: BorderRadius.circular(24),
-      ),
+    return SignovaPanel(
       padding: const EdgeInsets.fromLTRB(14, 6, 14, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.auto_awesome_rounded,
-                color: AppColors.accent,
-                size: 16,
-              ),
+              const SignovaIconBadge(Icons.auto_awesome_rounded, size: 28),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(
-                  'Đọc môi + AI',
+                  'Phụ đề và gợi ý',
                   style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    color: AppColors.ink,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
-              Text(
-                provider.label,
-                style: const TextStyle(color: AppColors.accent, fontSize: 11),
+              Flexible(
+                child: Text(
+                  provider.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: AppColors.accent, fontSize: 11),
+                ),
               ),
               IconButton(
                 tooltip: 'Xem các câu trong phiên',
@@ -64,7 +61,7 @@ class SentenceCaptionPanel extends StatelessWidget {
                   size: 17,
                   color: sentences.isEmpty
                       ? AppColors.captionMuted
-                      : Colors.white,
+                      : AppColors.ink,
                 ),
               ),
             ],
@@ -77,7 +74,7 @@ class SentenceCaptionPanel extends StatelessWidget {
                 child: const LinearProgressIndicator(
                   minHeight: 2,
                   color: AppColors.accent,
-                  backgroundColor: Color(0xFF344564),
+                  backgroundColor: Color(0xffdce8f3),
                 ),
               ),
             ),
@@ -108,9 +105,9 @@ class SentenceCaptionPanel extends StatelessWidget {
           const SizedBox(height: 9),
           Text(
             pending > 0
-                ? 'Đang khôi phục $pending câu · bạn có thể tiếp tục nói'
+                ? 'Đang soạn gợi ý cho $pending câu…'
                 : idle
-                ? 'Bản gốc ở trên · AI khôi phục ở dưới'
+                ? 'Gợi ý xuất hiện sau mỗi câu.'
                 : status,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -219,14 +216,14 @@ class _SentencePairCardState extends State<SentencePairCard> {
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xFF293B5B),
+            color: const Color(0xffeef4ff),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'ĐỌC MÔI · CÂU ${sentence.number}',
+                'PHỤ ĐỀ GỐC · CÂU ${sentence.number}',
                 style: const TextStyle(
                   fontSize: 10,
                   color: AppColors.captionMuted,
@@ -240,7 +237,7 @@ class _SentencePairCardState extends State<SentencePairCard> {
                 style: const TextStyle(
                   fontSize: 20,
                   height: 1.45,
-                  color: Colors.white,
+                  color: AppColors.ink,
                 ),
               ),
             ],
@@ -267,7 +264,7 @@ class _SentencePairCardState extends State<SentencePairCard> {
                     const SizedBox(width: 6),
                     const Expanded(
                       child: Text(
-                        'AI KHÔI PHỤC',
+                        'GỢI Ý CÂU',
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
@@ -283,14 +280,6 @@ class _SentencePairCardState extends State<SentencePairCard> {
                           strokeWidth: 1.5,
                           color: AppColors.success,
                         ),
-                      )
-                    else if (review.hasText)
-                      Text(
-                        '${(review.elapsedMs / 1000).toStringAsFixed(1)} s',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: AppColors.success,
-                        ),
                       ),
                   ],
                 ),
@@ -299,10 +288,10 @@ class _SentencePairCardState extends State<SentencePairCard> {
                   liveRegion: true,
                   child: Text(
                     sentence.pending
-                        ? 'Đang khôi phục câu…'
+                        ? 'Đang soạn gợi ý…'
                         : review.hasText
                         ? review.text
-                        : review.message ?? 'AI chưa hoàn tất. Câu gốc ở trên.',
+                        : (review.message ?? 'Chưa có gợi ý cho câu này.'),
                     style: TextStyle(
                       fontSize: review.hasText ? 22 : 15,
                       fontWeight: review.hasText
@@ -336,7 +325,7 @@ class _DraftPair extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'ĐỌC MÔI',
+              'PHỤ ĐỀ GỐC',
               style: TextStyle(
                 color: AppColors.captionMuted,
                 fontSize: 10,
@@ -353,7 +342,7 @@ class _DraftPair extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 23,
                 height: 1.4,
-                color: Colors.white,
+                color: AppColors.ink,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -370,7 +359,7 @@ class _DraftPair extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'AI KHÔI PHỤC',
+              'GỢI Ý CÂU',
               style: TextStyle(
                 color: AppColors.success,
                 fontSize: 10,
@@ -380,8 +369,8 @@ class _DraftPair extends StatelessWidget {
             const SizedBox(height: 5),
             Text(
               idle
-                  ? 'Câu được khôi phục sẽ hiện ở đây.'
-                  : 'AI xử lý khi bạn ngừng nói.',
+                  ? 'Gợi ý sẽ hiện ở đây.'
+                  : 'Gợi ý sẽ hiện sau khi bạn ngừng nói.',
               style: const TextStyle(
                 fontSize: 15,
                 height: 1.45,

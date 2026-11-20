@@ -17,6 +17,40 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
+  testWidgets('saved transcript and copy action are readable on their card', (
+    tester,
+  ) async {
+    final result = TranscriptionResult.fromJson({
+      'request_id': 'contrast',
+      'transcript': 'Xin chào',
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: ResultScreen(result: result),
+      ),
+    );
+    final caption = find.byWidgetPredicate(
+      (w) => w is SelectableText && w.data == 'Xin chào',
+    );
+    final card = tester.widget<Card>(
+      find.ancestor(of: caption, matching: find.byType(Card)).first,
+    );
+    final text = tester.widget<SelectableText>(caption);
+    final button = tester.widget<OutlinedButton>(
+      find.widgetWithText(OutlinedButton, 'Sao chép phụ đề'),
+    );
+    for (final color in [
+      text.style!.color!,
+      button.style!.foregroundColor!.resolve({})!,
+    ]) {
+      final contrast =
+          (card.color!.computeLuminance() + 0.05) /
+          (color.computeLuminance() + 0.05);
+      expect(contrast, greaterThanOrEqualTo(4.5));
+    }
+  });
+
   testWidgets(
     'saved address is not readiness and stale responses are ignored',
     (tester) async {

@@ -3,16 +3,21 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import logging
 from logging.handlers import RotatingFileHandler
 import queue
 import threading
 import tkinter as tk
-from tkinter import messagebox, scrolledtext, ttk
+from tkinter import messagebox, scrolledtext, simpledialog, ttk
+
+from desktop_gemini import configure_gemini
+from desktop_qr import pairing_code
 
 from desktop_runtime import (
     APP_NAME,
     APP_VERSION,
+    DESKTOP_VERSION,
     ROOT,
     configure_runtime,
     data_dir,
@@ -70,10 +75,10 @@ class ServerWindow:
     def __init__(self, args):
         self.args = args
         self.root = tk.Tk()
-        self.root.title(f"{APP_NAME} · {APP_VERSION}")
-        self.root.geometry("720x740")
-        self.root.minsize(640, 700)
-        self.root.configure(bg="#f4f7f6")
+        self.root.title(f"{APP_NAME} · {DESKTOP_VERSION}")
+        self.root.geometry("744x720")
+        self.root.minsize(650, 640)
+        self.root.configure(bg="#f5f8ff")
         icon = ROOT.parent / "VietLip.ico"
         if icon.is_file():
             self.root.iconbitmap(str(icon))
@@ -104,25 +109,25 @@ class ServerWindow:
     def _build_ui(self):
         style = ttk.Style()
         style.theme_use("clam")
-        style.configure("TFrame", background="#f4f7f6")
-        style.configure("TLabel", background="#f4f7f6", foreground="#16343c", font=("Segoe UI", 10))
-        style.configure("Muted.TLabel", foreground="#546866")
+        style.configure("TFrame", background="#f5f8ff")
+        style.configure("TLabel", background="#f5f8ff", foreground="#1e2742", font=("Segoe UI", 10))
+        style.configure("Muted.TLabel", foreground="#5f6f84")
         style.configure("Card.TFrame", background="white")
-        style.configure("Card.TLabel", background="white", foreground="#546866")
+        style.configure("Card.TLabel", background="white", foreground="#5f6f84")
         style.configure("Title.TLabel", font=("Segoe UI", 26, "bold"))
         style.configure(
-            "Status.TLabel", background="white", foreground="#0c756e", font=("Segoe UI", 18, "bold")
+            "Status.TLabel", background="white", foreground="#006b9a", font=("Segoe UI", 18, "bold")
         )
         style.configure("TButton", font=("Segoe UI", 10), padding=(14, 10))
-        style.configure("Accent.TButton", background="#0c756e", foreground="white", borderwidth=0)
-        style.map("Accent.TButton", background=[("active", "#095e59"), ("pressed", "#084f4b")])
-        style.configure("TCombobox", padding=10, fieldbackground="white", foreground="#16343c")
+        style.configure("Accent.TButton", background="#006b9a", foreground="white", borderwidth=0)
+        style.map("Accent.TButton", background=[("active", "#005a82"), ("pressed", "#004f72")])
+        style.configure("TCombobox", padding=10, fieldbackground="white", foreground="#1e2742")
         panel = ttk.Frame(self.root, padding=28)
         panel.pack(fill="both", expand=True)
         footer = ttk.Frame(panel)
         footer.pack(side="bottom", fill="x", pady=(20, 0))
         ttk.Label(
-            footer, text="Đọc môi bằng hình ảnh\nAI sau phiên là tùy chọn", style="Muted.TLabel"
+            footer, text="Đọc môi bằng hình ảnh\nGợi ý câu qua Gemini khi được chọn", style="Muted.TLabel"
         ).pack(side="left")
         ttk.Button(footer, text="Đóng máy chủ", command=self.close).pack(side="right")
         self.footer = footer
@@ -130,7 +135,7 @@ class ServerWindow:
         header = ttk.Frame(panel)
         header.pack(fill="x")
         ttk.Label(header, text="VietLip", style="Title.TLabel").pack(side="left")
-        ttk.Label(header, text=APP_VERSION, style="Muted.TLabel").pack(
+        ttk.Label(header, text=DESKTOP_VERSION, style="Muted.TLabel").pack(
             side="right", anchor="s", pady=8
         )
         ttk.Label(panel, text="Máy chủ đọc môi tiếng Việt", style="Muted.TLabel").pack(
@@ -146,46 +151,60 @@ class ServerWindow:
             card, textvariable=self.detail, style="Card.TLabel", wraplength=600
         )
         detail_label.pack(anchor="w", pady=(8, 0))
-        ttk.Label(panel, text="Kết nối điện thoại", font=("Segoe UI", 13, "bold")).pack(anchor="w")
+        pairing = ttk.Frame(panel, style="Card.TFrame", padding=16)
+        pairing.pack(fill="x", pady=(0, 16))
+        self.qr_placeholder = tk.PhotoImage(width=1, height=1)
+        self.qr_label = tk.Label(
+            pairing, bg="white", fg="#5f6f84", width=264, height=264,
+            wraplength=220, image=self.qr_placeholder, compound="center",
+        )
+        self.qr_label.pack(side="left", padx=(0, 18))
+        connection = ttk.Frame(pairing, style="Card.TFrame")
+        connection.pack(side="left", fill="both", expand=True, pady=8)
         ttk.Label(
-            panel, text="Nhập địa chỉ này trong Cài đặt của ứng dụng.", style="Muted.TLabel"
-        ).pack(anchor="w", pady=(5, 12))
+            connection, text="Kết nối điện thoại", style="Card.TLabel",
+            font=("Segoe UI", 15, "bold"), foreground="#1e2742",
+        ).pack(anchor="w")
+        ttk.Label(
+            connection, text="Mở VietLip trên điện thoại\nvà vào Cài đặt → Quét QR.",
+            style="Card.TLabel", justify="left",
+        ).pack(anchor="w", pady=(6, 14))
         self.address_box = ttk.Combobox(
-            panel,
+            connection,
             textvariable=self.lan,
             values=self.addresses,
             state="readonly",
-            font=("Segoe UI", 17),
-            width=22,
+            font=("Segoe UI", 12),
+            width=25,
         )
         self.address_box.pack(fill="x")
-        lan_actions = ttk.Frame(panel)
+        lan_actions = ttk.Frame(connection, style="Card.TFrame")
         lan_actions.pack(fill="x", pady=(12, 8))
-        ttk.Button(
+        self.copy_button = ttk.Button(
             lan_actions,
             text="Sao chép địa chỉ",
             style="Accent.TButton",
             command=lambda: self.copy(self.lan.get()),
-        ).pack(side="left")
+        )
+        self.copy_button.pack(side="left")
         ttk.Button(lan_actions, text="Làm mới IP", command=self.refresh_addresses).pack(
             side="left", padx=(10, 0)
         )
-        network_label = ttk.Label(
-            panel, textvariable=self.network_status, style="Muted.TLabel", wraplength=640
-        )
-        network_label.pack(anchor="w", pady=(4, 20))
-        ttk.Label(
-            panel, text="Trong app: Cài đặt → Lưu và kiểm tra", font=("Segoe UI", 11, "bold")
-        ).pack(anchor="w")
         hint = ttk.Label(
-            panel,
-            text="Sau đó bấm Bắt đầu đọc môi. Giữ máy chủ mở trong phiên.",
-            style="Muted.TLabel",
-            wraplength=640,
+            connection, textvariable=self.network_status, style="Card.TLabel",
+            justify="left", wraplength=270,
         )
-        hint.pack(anchor="w", pady=(6, 16))
-        self.log_toggle = ttk.Button(panel, text="Xem nhật ký", command=self.toggle_logs)
-        self.log_toggle.pack(anchor="w")
+        hint.pack(anchor="w", pady=(6, 0))
+        self.lan.trace_add("write", self.update_pairing_code)
+        self.update_pairing_code()
+        options = ttk.Frame(panel)
+        options.pack(fill="x")
+        self.key_button = ttk.Button(options, text="Cài đặt key Gemini", command=self.set_key, state="disabled")
+        self.key_button.pack(side="left")
+        self.log_toggle = ttk.Button(options, text="Xem nhật ký", command=self.toggle_logs)
+        self.log_toggle.pack(side="left", padx=10)
+        self.key_status = tk.StringVar(value="")
+        ttk.Label(panel, textvariable=self.key_status, style="Muted.TLabel").pack(anchor="w", pady=(6, 0))
         self.log_container = ttk.Frame(panel)
         self.log_box = scrolledtext.ScrolledText(
             self.log_container,
@@ -206,10 +225,22 @@ class ServerWindow:
             width = max(250, event.width - 40)
             self.status_label.configure(wraplength=width)
             detail_label.configure(wraplength=width)
-            network_label.configure(wraplength=width + 40)
-            hint.configure(wraplength=width + 40)
 
         panel.bind("<Configure>", resize)
+
+    def set_key(self):
+        value = simpledialog.askstring(
+            "Gemini", "Nhập key Gemini để thêm gợi ý sau mỗi câu. Key lưu trên PC này.",
+            show="*", parent=self.root,
+        )
+        if value is None:
+            return
+        try:
+            configure_gemini(value)
+        except (OSError, ValueError):
+            messagebox.showerror(APP_NAME, "Chưa lưu được key Gemini. Kiểm tra key rồi thử lại.", parent=self.root)
+            return
+        self.key_status.set("Đã lưu key Gemini. Chọn Kèm gợi ý câu trên điện thoại.")
 
     def toggle_logs(self):
         self.logs_visible = not self.logs_visible
@@ -233,6 +264,8 @@ class ServerWindow:
                     raise RuntimeError(
                         f"Cổng {self.args.port} đang được dùng. Đóng server cũ rồi mở lại."
                     )
+                configured = configure_gemini()
+                self.events.put(("gemini", configured))
                 configure_runtime(self.args.device, self.args.trace_directory)
                 self.server = make_server(self.args.port)
                 if self.closing:
@@ -260,7 +293,7 @@ class ServerWindow:
 
     def show_health(self, health):
         self.missed_health = 0
-        self.status_label.configure(foreground="#0c756e")
+        self.status_label.configure(foreground="#006b9a")
         if health.get("app_version") != APP_VERSION:
             self.status.set("Đang có một server phiên bản khác")
             self.detail.set(
@@ -295,6 +328,9 @@ class ServerWindow:
                     self.log_box.delete("1.0", "101.0")
                 self.log_box.see("end")
                 self.log_box.configure(state="disabled")
+            elif kind == "gemini":
+                self.key_button.configure(state="normal")
+                self.key_status.set("Gemini đã có key trên PC." if value else "Phụ đề trực tiếp đã sẵn sàng. Thêm key để dùng gợi ý câu.")
             elif kind in ("health", "external"):
                 self.polling = False
                 if value:
@@ -317,10 +353,28 @@ class ServerWindow:
             self.root.after(150, self.drain)
 
     def refresh_addresses(self):
+        current = self.lan.get()
         self.addresses = local_addresses(self.args.port)
         self.address_box.configure(values=self.addresses)
-        self.lan.set(self.addresses[0] if self.addresses else "Chưa có địa chỉ mạng nội bộ")
-        self.network_status.set("Đã cập nhật IP. Nếu đổi Wi-Fi, nhập lại địa chỉ mới trong app.")
+        self.lan.set(current if current in self.addresses else next(iter(self.addresses), ""))
+        self.network_status.set("Đã làm mới IP. Quét lại nếu bạn vừa đổi mạng.")
+
+    def update_pairing_code(self, *_):
+        address = self.lan.get()
+        self.qr_image = None
+        if address in self.addresses:
+            try:
+                self.qr_image = tk.PhotoImage(data=base64.b64encode(pairing_code(address)))
+            except Exception:
+                logging.exception("Không thể tạo mã QR")
+        self.copy_button.configure(state="normal" if address in self.addresses else "disabled")
+        self.qr_label.configure(
+            image=self.qr_image or self.qr_placeholder,
+            compound="center",
+            text="" if self.qr_image else (
+                "Chưa có IP mạng nội bộ" if not self.addresses else "Có thể nhập IP trong Cài đặt"
+            ),
+        )
 
     def copy(self, value):
         self.root.clipboard_clear()
@@ -352,6 +406,7 @@ def main():
         configure_logging()
         if not port_available(args.port):
             raise RuntimeError(f"Port {args.port} is already in use")
+        configure_gemini()
         configure_runtime(args.device, args.trace_directory)
         make_server(args.port).run()
     else:

@@ -80,6 +80,12 @@ server/.ruff_cache/
 **/android/.gradle/
 
 # Local release packaging
+*.exe
+*.zip
+*.dpapi
+api-keys.json
+desktop-gemini-profile.json
+install-default.resource
 /build/windows_server/
 /output/
 

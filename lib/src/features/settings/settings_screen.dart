@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,6 +10,7 @@ import '../../widgets/app_brand.dart';
 import '../../widgets/status_notice.dart';
 import '../../widgets/connection_diagram.dart';
 import 'reading_method_setting.dart';
+import 'server_qr_scanner.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({required this.settings, super.key});
@@ -24,7 +26,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   );
   Map<String, dynamic>? _health;
   String? _error, _fieldError;
-  bool _checking = false;
+  bool _checking = false, _scanning = false;
 
   @override
   void dispose() {
@@ -46,6 +48,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
       });
       return;
     }
+    await _checkAddress(address);
+  }
+
+  Future<void> _scanQr() async {
+    if (_checking || _scanning) return;
+    FocusScope.of(context).unfocus();
+    _scanning = true;
+    try {
+      final match = await Navigator.of(context, rootNavigator: true)
+          .push<ServerQrMatch>(
+            MaterialPageRoute(builder: (_) => const ServerQrScanner()),
+          );
+      if (!mounted || match == null) return;
+      await widget.settings.setApiUrl(match.address);
+      if (mounted) {
+        _urlController.text = widget.settings.apiUrl;
+        setState(() {
+          _health = match.health;
+          _error = _fieldError = null;
+        });
+      }
+    } catch (error) {
+      if (mounted) setState(() => _error = LipReaderApi.readableError(error));
+    } finally {
+      _scanning = false;
+    }
+  }
+
+  Future<void> _checkAddress(String address) async {
     setState(() {
       _checking = true;
       _error = _fieldError = null;
@@ -53,8 +84,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
     try {
       await widget.settings.setApiUrl(address);
+      if (!mounted) return;
       _urlController.text = widget.settings.apiUrl;
-      final health = await LipReaderApi(widget.settings).health();
+      final health = await LipReaderApi.atAddress(address).health();
       if (mounted) setState(() => _health = health);
     } catch (error) {
       if (mounted) setState(() => _error = LipReaderApi.readableError(error));
@@ -65,6 +97,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final supportsScanner =
+        !kIsWeb &&
+        {
+          TargetPlatform.android,
+          TargetPlatform.iOS,
+        }.contains(defaultTargetPlatform);
     final ready = _health?['realtime_available'] == true;
     final failed =
         _health?['status'] == 'degraded' || _health?['last_error'] != null;
@@ -90,6 +128,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(color: AppColors.muted, height: 1.6),
                 ),
                 const SizedBox(height: 24),
+                if (supportsScanner) ...[
+                  FilledButton.icon(
+                    onPressed: _checking ? null : _scanQr,
+                    icon: const Icon(Icons.qr_code_scanner_rounded),
+                    label: const Text('Quét QR máy chủ'),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                if (_checking) ...[
+                  const LinearProgressIndicator(),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Đang kiểm tra máy chủ trong mạng nội bộ…',
+                    style: TextStyle(color: AppColors.muted),
+                  ),
+                ],
+                if (_health != null) ...[
+                  const SizedBox(height: 12),
+                  StatusNotice(
+                    title: ready
+                        ? 'Sẵn sàng đọc môi'
+                        : failed
+                        ? 'Máy chủ chưa thể đọc môi'
+                        : 'Đã kết nối, máy chủ đang chuẩn bị',
+                    detail: ready
+                        ? 'Đã lưu địa chỉ máy chủ trên điện thoại.'
+                        : failed
+                        ? 'Mở cửa sổ VietLip Server để xem lỗi khởi động, rồi kiểm tra lại.'
+                        : 'Đã lưu địa chỉ. Chờ VietLip Server báo sẵn sàng.',
+                    busy: !ready && !failed,
+                    error: failed,
+                    action: ready ? 'Về màn hình đọc môi' : null,
+                    onAction: ready ? () => context.go('/read') : null,
+                  ),
+                ],
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  StatusNotice(
+                    title: 'Chưa kết nối được máy chủ',
+                    detail: _error,
+                    error: true,
+                  ),
+                ],
+                const SizedBox(height: 12),
                 TextField(
                   controller: _urlController,
                   enabled: !_checking,
@@ -113,7 +195,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                FilledButton.icon(
+                OutlinedButton.icon(
                   onPressed: _checking ? null : _saveAndCheck,
                   icon: _checking
                       ? const SizedBox.square(
@@ -123,40 +205,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       : const Icon(Icons.wifi_rounded),
                   label: Text(_checking ? 'Đang kiểm tra…' : 'Lưu và kiểm tra'),
                 ),
-                if (_checking) ...[
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Đang tìm máy chủ trong mạng nội bộ…',
-                    style: TextStyle(color: AppColors.muted),
-                  ),
-                ],
-                if (_health != null) ...[
-                  const SizedBox(height: 16),
-                  StatusNotice(
-                    title: ready
-                        ? 'Sẵn sàng đọc môi'
-                        : failed
-                        ? 'Máy chủ chưa thể đọc môi'
-                        : 'Đã kết nối, máy chủ đang chuẩn bị',
-                    detail: ready
-                        ? 'Giữ máy dọc, nhìn thẳng và nói tự nhiên.'
-                        : failed
-                        ? 'Mở cửa sổ VietLip Server để xem lỗi khởi động, rồi kiểm tra lại.'
-                        : 'Chờ VietLip Server báo sẵn sàng, rồi kiểm tra lại.',
-                    busy: !ready && !failed,
-                    error: failed,
-                    action: ready ? 'Về màn hình đọc môi' : null,
-                    onAction: ready ? () => context.go('/read') : null,
-                  ),
-                ],
-                if (_error != null) ...[
-                  const SizedBox(height: 16),
-                  StatusNotice(
-                    title: 'Chưa kết nối được máy chủ',
-                    detail: _error,
-                    error: true,
-                  ),
-                ],
                 const SizedBox(height: 24),
                 const Divider(),
                 const SizedBox(height: 20),
@@ -198,8 +246,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: Text('Video và quyền riêng tư'),
                   children: [
                     Text(
-                      'Phụ đề trực tiếp chỉ dùng hình ảnh gửi tới máy chủ bạn đã nhập. '
-                      'Nếu bật Khôi phục câu, từng câu đã chốt được gửi tới Groq hoặc OpenRouter qua PC. '
+                      'Phụ đề trực tiếp chỉ dùng hình ảnh gửi tới máy chủ bạn đã chọn. '
+                      'Nếu bật Kèm gợi ý câu, từng câu đã chốt được gửi tới Google Gemini qua PC. '
                       'Video có âm thanh được lưu trên điện thoại để đối chiếu. '
                       'Lịch sử lưu trên thiết bị; ứng dụng không tự dùng video để huấn luyện.',
                       style: TextStyle(color: AppColors.muted, height: 1.6),

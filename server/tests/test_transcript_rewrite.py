@@ -12,13 +12,14 @@ import pytest
 
 from app.main import create_app
 from app.services.engine import MockEngine
+from app.services import gemini
 from app.services.transcript_rewrite import PROMPTS, RewriteRequest, TranscriptRewriter
 
 
 @pytest.fixture
-def gateway(tmp_path):
+def gateway(tmp_path, monkeypatch):
     received = []
-    response = {"status": 200, "text": "Xin chào bạn.", "finish": "stop"}
+    response = {"status": 200, "text": "Xin chào bạn.", "finish": "STOP"}
     entered, release = threading.Event(), threading.Event()
 
     class Handler(BaseHTTPRequestHandler):
@@ -39,10 +40,9 @@ def gateway(tmp_path):
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             payload = {
-                "choices": [
-                    {"finish_reason": response["finish"], "message": {"content": response["text"]}}
-                ],
-                "model": "model-test",
+                "candidates": [{"finishReason": response["finish"], "content": {"parts": [
+                    {"thought": True, "text": "hidden"}, {"text": response["text"]}]}}],
+                "modelVersion": gemini.DEFAULT_MODEL,
             }
             try:
                 for _ in range(response.get("trickle_count", 0)):
@@ -54,22 +54,21 @@ def gateway(tmp_path):
                 pass
 
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    monkeypatch.setattr(gemini, "API_ROOT", f"http://127.0.0.1:{server.server_port}")
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     path = tmp_path / "rewrite.json"
     keys = tmp_path / "keys.json"
-    keys.write_text(json.dumps({"groq": "test-private-key"}), encoding="utf-8")
+    keys.write_text(json.dumps({"gemini": "test-private-key"}), encoding="utf-8")
     path.write_text(
         json.dumps(
             {
                 "providers": {
-                    name: {
-                        "endpoint": f"http://127.0.0.1:{server.server_port}",
-                        "model": model,
+                    "gemini": {
+                        "model": gemini.DEFAULT_MODEL,
                         "api_key_file": str(keys),
-                        "api_key_name": "groq",
+                        "api_key_name": "gemini",
                     }
-                    for name, model in (("groq", "gpt-test"), ("openrouter", "model-test:free"))
                 }
             }
         ),
@@ -105,29 +104,22 @@ def test_only_text_is_sent_and_id_is_preserved(gateway):
     assert result.status == "completed" and result.sentence_id == "session-1"
     assert result.text == "Xin chào bạn."
     headers, body = received[0]
-    assert headers["Authorization"] == "Bearer test-private-key"
-    assert body["reasoning_effort"] == "low"
-    assert body["messages"][0]["content"] == PROMPTS["direct"]
-    assert json.loads(body["messages"][1]["content"]) == {"text": "xin chao"}
-    assert len(body["messages"]) == 2
+    assert headers["x-goog-api-key"] == "test-private-key"
+    assert body["generationConfig"]["thinkingConfig"] == gemini.THINKING[gemini.DEFAULT_MODEL]
+    assert body["systemInstruction"]["parts"][0]["text"] == gemini.PROMPT
+    assert json.loads(body["contents"][0]["parts"][0]["text"]) == {"text": "xin chao"}
+    assert len(body["contents"]) == 1
 
 
-def test_openrouter_can_only_use_free_route(gateway):
-    path, received, *_ = gateway
+def test_no_repeated_requests_when_credit_is_exhausted(gateway):
+    path, received, response, *_ = gateway
     service = TranscriptRewriter(path)
-    result = asyncio.run(service.rewrite(request(provider="openrouter")))
-    assert result.provider == "openrouter" and result.status == "completed"
-    body = received[0][1]
-    assert body["model"].endswith(":free")
-    assert body["provider"] == {
-        "allow_fallbacks": False,
-        "max_price": {"prompt": 0, "completion": 0},
-    }
-    config = json.loads(path.read_text())
-    config["providers"]["openrouter"]["model"] = "model-paid"
-    path.write_text(json.dumps(config))
-    result = asyncio.run(service.rewrite(request(provider="openrouter", sentence_id=None)))
-    assert result.status == "unavailable" and len(received) == 1
+    response["status"] = 402
+    first = asyncio.run(service.rewrite(request()))
+    second = asyncio.run(service.rewrite(request(sentence_id="new-turn")))
+    assert first.code == second.code == "billing_required"
+    assert first.text == second.text == "xin chao"
+    assert len(received) == 1
 
 
 def test_same_sentence_repeated_or_concurrent_calls_provider_once(gateway):

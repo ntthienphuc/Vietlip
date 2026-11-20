@@ -9,7 +9,8 @@ from app.main import create_app
 from app.services.engine import MockEngine
 from app.services.streaming_buffer import Frame, FrameBuffer, WordTimeline, unpack_frame
 from app.services.word_alignment import align_words
-from app.services.realtime import decode_jpeg_frames
+from app.services.realtime import LiveJpegDecoder, decode_jpeg_frames
+from app.services.video_preprocessor import VideoValidationError
 
 
 def test_native_camera_rotation_and_resize_preserve_upright_geometry():
@@ -29,6 +30,27 @@ def test_timestamp_packet_rejects_bad_time_and_preserves_capture_time():
     for timestamp in (-1, float("nan"), float("inf")):
         with pytest.raises(ValueError):
             unpack_frame(b"LIP2" + struct.pack(">Id", 0, timestamp) + jpeg)
+
+
+def test_live_decoder_reuses_only_session_pixels_and_preserves_order_and_rotation():
+    payloads = [
+        cv2.imencode(".jpg", np.full((32, 48, 3), shade, dtype=np.uint8))[1].tobytes()
+        for shade in (20, 80, 140)
+    ]
+    a, b, c = payloads
+    one_frame_bytes = max(map(len, payloads)) + 32 * 48 * 3
+    cache = LiveJpegDecoder(90, 360, max_bytes=2 * one_frame_bytes)
+    first = cache.decode([a, b, a])
+    assert first[0] is first[2]
+    second = cache.decode([c, b, a])
+    expected = decode_jpeg_frames([c, b, a], True, rotation_degrees=90, max_width=360)
+    assert second[1] is first[1] and second[2] is first[0]
+    assert all(np.array_equal(x, y) for x, y in zip(second, expected, strict=True))
+    assert cache.decode([c])[0] is not second[0]
+    assert LiveJpegDecoder(0, 360).decode([a])[0].shape == (32, 48, 3)
+    for bad in ([], [a, b"broken", c], [b""]):
+        with pytest.raises(VideoValidationError):
+            cache.decode(bad)
 
 
 def test_frame_drop_does_not_compress_time_and_memory_stays_bounded():

@@ -49,7 +49,7 @@ class CaptureCameraPanel extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      recording ? timerLabel : 'Đặt môi trong khung',
+                      recording ? 'Đang ghi' : 'Đặt môi trong khung',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 12,

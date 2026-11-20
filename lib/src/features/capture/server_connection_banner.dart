@@ -94,20 +94,23 @@ class _ServerConnectionBannerState extends State<ServerConnectionBanner> {
     final detail = configured
         ? Uri.tryParse(widget.settings.apiUrl)?.authority ??
               widget.settings.apiUrl
-        : 'Mở VietLip Server, rồi nhập IP trong Cài đặt';
+        : 'Mở VietLip Server, rồi quét QR trong Cài đặt';
     return Material(
       color: _ready ? AppColors.primarySoft : Colors.white,
-      borderRadius: BorderRadius.circular(14),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: AppColors.border, width: 2),
+      ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         onTap: widget.onConfigure,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 12),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
           child: Row(
             children: [
               Icon(
                 _ready ? Icons.wifi_rounded : Icons.computer_outlined,
-                color: _ready ? AppColors.primary : AppColors.muted,
+                color: _ready ? AppColors.primary : AppColors.warning,
                 size: 19,
               ),
               const SizedBox(width: 12),
@@ -118,7 +121,7 @@ class _ServerConnectionBannerState extends State<ServerConnectionBanner> {
                     Text(
                       title,
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -126,7 +129,7 @@ class _ServerConnectionBannerState extends State<ServerConnectionBanner> {
                     Text(
                       detail,
                       style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         color: AppColors.muted,
                       ),
                     ),

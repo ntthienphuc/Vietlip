@@ -212,9 +212,9 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('Đề xuất AI'), findsOneWidget);
+    expect(find.text('Gợi ý câu'), findsOneWidget);
     expect(find.text('bản sửa riêng'), findsOneWidget);
-    expect(find.text('Sao chép bản AI'), findsOneWidget);
+    expect(find.text('Sao chép gợi ý'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     history.dispose();
     expect(tester.takeException(), isNull);

@@ -24,7 +24,7 @@ def sha256(path: Path) -> str:
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-def package(payload: Path, output: Path, receipt: Path, csc: Path) -> dict:
+def package(payload: Path, output: Path, receipt: Path, csc: Path, *, default_key: bytes | None = None) -> dict:
     setups = list(payload.glob("VietLip-Server-Setup-*.exe"))
     if len(setups) != 1:
         raise ValueError("Expected exactly one Inno Setup EXE")
@@ -65,6 +65,13 @@ def package(payload: Path, output: Path, receipt: Path, csc: Path) -> dict:
         code = work / "InstallerBootstrap.cs"
         code.write_text(source, encoding="utf-8-sig")
         bootstrap = work / "bootstrap.exe"
+        resource = []
+        if default_key is not None:
+            if not default_key or not default_key.isascii() or any(c < 33 or c > 126 for c in default_key):
+                raise ValueError("Invalid default Gemini credential")
+            seed = work / "install-default.resource"
+            seed.write_bytes(default_key)
+            resource = [f"/resource:{seed},VietLip.DefaultGemini"]
         subprocess.run(
             [
                 str(csc),
@@ -78,11 +85,15 @@ def package(payload: Path, output: Path, receipt: Path, csc: Path) -> dict:
                 "/reference:System.Windows.Forms.dll",
                 "/reference:System.Drawing.dll",
                 "/reference:System.Core.dll",
+                "/reference:System.Security.dll",
                 "/reference:System.IO.Compression.dll",
+                *resource,
                 str(code),
             ],
             check=True,
         )
+        if resource:
+            seed.unlink()
         offset = bootstrap.stat().st_size
         # CreateNew protects an existing verified final release from accidental replacement.
         with (
@@ -103,6 +114,7 @@ def package(payload: Path, output: Path, receipt: Path, csc: Path) -> dict:
             )
         result = {
             "format": "VietLip PE + ZIP64 + SHA256 footer",
+            "includes_default_gemini": default_key is not None,
             "output": str(output.resolve()),
             "bytes": output.stat().st_size,
             "sha256": sha256(output),
@@ -121,13 +133,22 @@ def main() -> None:
     parser.add_argument("--payload", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--receipt", required=True, type=Path)
+    parser.add_argument("--with-saved-gemini-key", action="store_true",
+                        help="Internal distribution only. Personalize using the current Windows account's saved key.")
     parser.add_argument(
         "--csc",
         type=Path,
         default=Path(r"C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"),
     )
     args = parser.parse_args()
-    result = package(args.payload, args.output, args.receipt, args.csc)
+    default_key = None
+    if args.with_saved_gemini_key:
+        from desktop_gemini import saved_key
+
+        default_key = saved_key().encode("ascii")
+        if not default_key:
+            parser.error("Save a Gemini key in VietLip Server before building an internal installer.")
+    result = package(args.payload, args.output, args.receipt, args.csc, default_key=default_key)
     print(
         json.dumps(
             {key: result[key] for key in ("output", "bytes", "sha256")}, indent=2

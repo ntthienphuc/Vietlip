@@ -211,7 +211,7 @@ class _CaptureScreenState extends State<CaptureScreen>
   }
 
   Future<void> _initializeCamera([CameraDescription? requested]) async {
-    if (_initializationInFlight || !_foreground) return;
+    if (_initializationInFlight || _suspendingCamera || !_foreground) return;
     _initializationInFlight = true;
     if (mounted) {
       setState(() {
@@ -219,7 +219,14 @@ class _CaptureScreenState extends State<CaptureScreen>
         _error = null;
       });
     }
+    CameraController? pending;
     try {
+      // CameraX unbinds every use case when a controller is disposed. Release
+      // the previous lens before binding the replacement preview.
+      final previous = _camera;
+      _camera = null;
+      await previous?.dispose();
+      if (!mounted || !_foreground) return;
       _cameras = await availableCameras();
       if (_cameras.isEmpty) throw StateError('Thiết bị không có camera.');
       final selected =
@@ -236,6 +243,7 @@ class _CaptureScreenState extends State<CaptureScreen>
         enableAudio: true,
         imageFormatGroup: ImageFormatGroup.yuv420,
       );
+      pending = controller;
       debugPrint('Lip camera: initializing ${selected.name}');
       await controller.initialize().timeout(const Duration(seconds: 20));
       debugPrint('Lip camera: initialized');
@@ -247,12 +255,9 @@ class _CaptureScreenState extends State<CaptureScreen>
         'device=${controller.value.deviceOrientation} '
         'sensor=${selected.sensorOrientation}',
       );
-      if (!mounted || !_foreground) {
-        await controller.dispose();
-        return;
-      }
-      await _camera?.dispose();
+      if (!mounted || !_foreground) return;
       _camera = controller;
+      pending = null;
     } on CameraException catch (error) {
       _error = switch (error.code) {
         'CameraAccessDenied' || 'CameraAccessDeniedWithoutPrompt' =>
@@ -264,8 +269,12 @@ class _CaptureScreenState extends State<CaptureScreen>
     } catch (error) {
       _error = error.toString();
     } finally {
-      _initializationInFlight = false;
-      if (mounted) setState(() => _initializing = false);
+      try {
+        await pending?.dispose();
+      } finally {
+        _initializationInFlight = false;
+        if (mounted) setState(() => _initializing = false);
+      }
     }
   }
 
@@ -1102,7 +1111,7 @@ class _CaptureScreenState extends State<CaptureScreen>
               _buildTips(),
               const SizedBox(height: 16),
               const Text(
-                'Mỗi phiên tối đa 5 phút. Phụ đề tự động có thể sai; chữ gạch dưới còn có thể thay đổi.',
+                'Mỗi phiên tối đa 5 phút. Khi bật Kèm gợi ý câu, máy tính gửi phần chữ đã chốt đến Google Gemini. Mô hình ngôn ngữ lớn (LLM) đề xuất cách diễn đạt. Bạn có thể so với phụ đề gốc ngay phía trên.',
                 style: TextStyle(color: AppColors.muted, height: 1.5),
               ),
               const SizedBox(height: 10),
@@ -1294,8 +1303,6 @@ class _CaptureScreenState extends State<CaptureScreen>
   }
 
   Widget _buildSelectedVideo() {
-    final video = _video!;
-    final name = video.name.isEmpty ? 'video.mp4' : video.name;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1326,12 +1333,6 @@ class _CaptureScreenState extends State<CaptureScreen>
                         ? 'Video của phiên đã lưu'
                         : 'Phiên phụ đề đã sẵn sàng',
                     style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: AppColors.muted),
                   ),
                 ],
               ),
