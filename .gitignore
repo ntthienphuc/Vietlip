@@ -75,6 +75,7 @@ server/.ruff_cache/
 *.mp4
 *.ckpt
 *.pt
+/server/models/SO_seed17.*.partial
 *.gguf
 /server/tools/
 **/android/.gradle/
@@ -86,6 +87,7 @@ server/.ruff_cache/
 api-keys.json
 desktop-gemini-profile.json
 install-default.resource
+/01_Cai_dat_noi_bo/
 /build/windows_server/
 /output/
 

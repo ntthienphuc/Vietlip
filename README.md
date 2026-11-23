@@ -2,6 +2,20 @@
 
 VietLip hiển thị phụ đề tiếng Việt từ khẩu hình. Điện thoại Android gửi hình camera qua Wi-Fi/LAN đến VietLip Server trên Windows. Máy chủ chạy SO17 cục bộ. Nếu người dùng bật **Kèm gợi ý câu**, PC gửi văn bản đã chốt đến Google Gemini 3.1 Flash-Lite. Ứng dụng hiển thị phụ đề gốc và gợi ý ở hai dòng riêng.
 
+## Lấy mã nguồn và checkpoint SO17
+
+Để tự build VietLip Server, chạy trên Windows:
+
+```powershell
+git clone https://github.com/ntthienphuc/liplens-app.git vietlip
+cd vietlip
+.\tools\get_so17.ps1
+```
+
+Script tải **SO17** từ GitHub Releases, kiểm tra SHA-256 và đặt tệp tại `server\models\SO_seed17.pt`. Nếu thích tải bằng trình duyệt, lưu [SO_seed17.pt](https://github.com/ntthienphuc/liplens-app/releases/download/vietlip-1.10.5-so17/SO_seed17.pt) vào cùng vị trí. Tệp có **973.779.255 byte**, SHA-256 `cddfb8c79f1db9d66695c0b1b7e2d98837187c600668a8aee3ccdd5b58981ecc`. Chỉ build APK Android thì có thể bỏ qua bước tải model.
+
+Tiếp tục với [hướng dẫn build APK và EXE](docs/BUILD_VI.md). Phụ đề trực tiếp chạy trên PC. Để bật gợi ý câu cho bản tự build, nhập API key của bạn ở **VietLip Server → Cài đặt key Gemini**.
+
 ## Cài đặt và sử dụng
 
 [Danh mục bộ bàn giao 1.10.5](docs/ban-giao-1.10.5/README.md) gồm mã SHA-256
