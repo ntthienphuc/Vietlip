@@ -109,7 +109,7 @@ def decode_jpeg_frames(
         import numpy as np
     except ImportError as exc:
         raise RuntimeError(
-            "Video runtime is missing. Install requirements-cpu.txt or requirements-gpu.txt."
+            "Video runtime is missing. Run server/setup_server.ps1 with -Runtime cpu or gpu."
         ) from exc
 
     frames_rgb: list[Any] = []

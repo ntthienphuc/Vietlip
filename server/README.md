@@ -26,5 +26,3 @@ The launcher displays a QR code once the server is ready. For console operation,
 The desktop profile selects SO17 FP32, beam size 3, and CTC weight 0.1. Recognition runs locally. When enabled, Gemini receives finalized caption text from the PC. Windows protects the user’s saved key with DPAPI. For a source build, paste your own key in **Cài đặt key Gemini**. The privately supplied Windows installer provisions a key on first install. The client stores the visual caption and suggestion separately.
 
 [Runtime configuration](desktop_runtime.py) · [API entry point](app/main.py) · [Streaming architecture](../docs/ARCHITECTURE.md)
-
-Older command-line adapters and experimental configurations are documented in the [historical server notes](README_LEGACY.md).

@@ -105,7 +105,7 @@ class VideoPreprocessor:
             import torch
         except ImportError as exc:
             raise RuntimeError(
-                "Video runtime is missing. Install requirements-cpu.txt or requirements-gpu.txt."
+                "Video runtime is missing. Run server/setup_server.ps1 with -Runtime cpu or gpu."
             ) from exc
 
         if len(frames_rgb) < self.min_frames:

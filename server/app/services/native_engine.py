@@ -10,14 +10,73 @@ import gc
 import os
 import sys
 import time
+from pathlib import Path
+from threading import Lock
+from typing import Any
 
-from .auto_avsr_engine import AutoAvsrEngine
+from ..config import Settings
 from .engine import EngineResult
+from .video_preprocessor import VideoPreprocessor
 from .word_alignment import align_words
 from .decoder_cache import cached_cross_attention
 
 
-class NativeAvsrEngine(AutoAvsrEngine):
+class NativeAvsrEngine:
+    def __init__(self, settings: Settings):
+        self.settings = settings
+        self.model_id = settings.model_id
+        self.state = "not_loaded"
+        self.loaded = False
+        self.cuda_available = False
+        self.device_label = settings.device
+        self.effective_precision = settings.precision
+        self.last_error: str | None = None
+        self._load_elapsed_ms: int | None = None
+        self._model: Any = None
+        self._torch: Any = None
+        self._load_lock = Lock()
+        self._inference_lock = Lock()
+        self._preprocessor = VideoPreprocessor(
+            auto_avsr_root=settings.auto_avsr_root,
+            target_fps=settings.target_fps,
+            min_frames=settings.min_frames,
+            max_frames=settings.max_frames,
+        )
+
+    def load(self) -> None:
+        if self.loaded:
+            return
+        with self._load_lock:
+            if self.loaded:
+                return
+            self.state = "loading"
+            try:
+                self._load_impl()
+            except Exception as exc:
+                self.state = "error"
+                self.last_error = f"{type(exc).__name__}: {exc}"
+                raise
+
+    @staticmethod
+    def _select_device(
+        requested: str,
+        *,
+        cuda_available: bool,
+        allow_cpu_fallback: bool,
+    ) -> str:
+        normalized = requested.strip().lower()
+        if normalized == "auto":
+            return "cuda" if cuda_available else "cpu"
+        if normalized == "cpu":
+            return "cpu"
+        if normalized.startswith("cuda"):
+            if cuda_available:
+                return normalized
+            if allow_cpu_fallback:
+                return "cpu"
+            raise RuntimeError("CUDA không khả dụng và LIP_ALLOW_CPU_FALLBACK=false.")
+        raise ValueError("LIP_DEVICE phải là auto, cpu hoặc cuda[:index].")
+
     def _load_impl(self):
         import torch
         import sentencepiece
@@ -123,8 +182,32 @@ class NativeAvsrEngine(AutoAvsrEngine):
         # Joining piece strings leaks <0xNN> tokens instead of decoding UTF-8.
         return self._spm.decode(pieces).strip()
 
-    def _decode(self, prepared, *, context_hint=None):
-        return self._decode_native(prepared, realtime=False)
+    def transcribe(
+        self,
+        video_path: Path,
+        *,
+        input_kind: str,
+        context_hint: str | None,
+    ) -> EngineResult:
+        total_started = time.perf_counter()
+        self.load()
+        preprocess_started = time.perf_counter()
+        prepared = self._preprocessor.prepare(video_path, input_kind)
+        preprocess_ms = round((time.perf_counter() - preprocess_started) * 1000)
+        with self._inference_lock:
+            decode_started = time.perf_counter()
+            result = self._decode_native(prepared, realtime=False)
+            decode_ms = round((time.perf_counter() - decode_started) * 1000)
+        result.diagnostics["runtime"] = {
+            "device": self.device_label,
+            "precision": self.effective_precision,
+            "cpu_threads": (self._torch.get_num_threads() if self.device_label == "cpu" else None),
+            "model_load_ms": self._load_elapsed_ms,
+            "preprocess_ms": preprocess_ms,
+            "decode_ms": decode_ms,
+            "total_engine_ms": round((time.perf_counter() - total_started) * 1000),
+        }
+        return result
 
     def _decode_native(self, prepared, *, realtime):
         torch = self._torch

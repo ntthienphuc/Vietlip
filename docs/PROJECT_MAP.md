@@ -9,7 +9,6 @@
 | [packaging/windows_server](../packaging/windows_server) | Runtime staging, payload verification, and Windows installer assembly. |
 | [test](../test) and [server/tests](../server/tests) | Flutter and server tests. Installer tests live under [packaging/windows_server/tests](../packaging/windows_server/tests). |
 | [tools](../tools) | Model download, signing, and development utilities. |
-| [research](../research) and [server/experiments](../server/experiments) | Offline experiments and historical model comparisons. |
 
 Start with the [build guide](BUILD.md) for the Android APK and Windows EXE. For the public checkpoint, use the [SO17 download script](../tools/get_so17.ps1). A standard source build uses the operator’s own Gemini key if sentence suggestions are enabled.
 

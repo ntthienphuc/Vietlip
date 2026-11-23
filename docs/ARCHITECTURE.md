@@ -6,11 +6,8 @@ code and a LAN address. Android also accepts a manually entered address.
 The Windows installer bundles Python 3.11, CPU/CUDA dependencies and SO17.
 See the [build guide](BUILD.md) and [Windows packaging notes](../packaging/windows_server/README.md).
 
-Previous architecture notes are preserved in `ARCHITECTURE_1_1_HISTORICAL.md`.
-
 The active product is a Flutter Android capture client and a Python inference
-server. Android is verified on SM-G965F / Android 10. iOS project files exist;
-the current release has not been built or validated on an iPhone.
+server. Android has been verified on SM-G965F / Android 10.
 
 ## Runtime responsibilities
 
@@ -36,8 +33,7 @@ server service rows are relative to `server/app/services`.
 
 ## Maintenance boundaries
 
-- `server/app` is production runtime code; `server/experiments` contains optional
-  trials. Live recognition uses SO17 visual inference. Version 1.10.5 requests
+- Live recognition uses SO17 visual inference. Version 1.10.5 requests
   Gemini suggestions independently of visual inference and caption delivery.
   Legacy assisted metadata is retained but is not shown as a newly generated review.
 - `server/vendor` and `packages/camera_android_camerax` retain upstream notices.

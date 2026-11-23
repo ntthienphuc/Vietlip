@@ -49,4 +49,4 @@ if ($actualMeanFaceHash -ne $expectedMeanFaceHash) {
 Write-Host "$Runtime environment ready."
 Write-Host "CPU model runtime (default): .\\setup_server.ps1 -Runtime cpu"
 Write-Host "GPU runtime: .\setup_server.ps1 -Runtime gpu"
-Write-Host "Start the application server: .\run_realtime.ps1"
+Write-Host "Start the application server: $pythonExe $serverRoot\desktop_launcher.py"

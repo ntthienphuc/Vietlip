@@ -2,7 +2,6 @@
 
 import asyncio
 import json
-from pathlib import Path
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -13,7 +12,7 @@ import pytest
 from app.main import create_app
 from app.services.engine import MockEngine
 from app.services import gemini
-from app.services.transcript_rewrite import PROMPTS, RewriteRequest, TranscriptRewriter
+from app.services.transcript_rewrite import RewriteRequest, TranscriptRewriter
 
 
 @pytest.fixture
@@ -257,16 +256,6 @@ def test_http_schema_rejects_client_credentials_media_and_retired_modes(monkeypa
         )
         assert client.get("/v1/rewrite-methods").json()["phase"] == "per_sentence"
     assert not received
-
-
-def test_recovery_prompt_matches_existing_benchmark():
-    import importlib.util
-
-    path = Path(__file__).parents[2] / "research/llm_rewrite_eval.py"
-    spec = importlib.util.spec_from_file_location("frozen_rewrite", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    assert PROMPTS["direct"] == module.PROMPTS["direct"]
 
 
 def test_opt_in_trace_records_actual_reply_once_without_credentials(gateway, monkeypatch, tmp_path):

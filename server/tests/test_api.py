@@ -174,10 +174,10 @@ def test_realtime_uses_rolling_windows_and_keeps_absolute_limit():
 
 
 def test_device_selection_falls_back_to_cpu():
-    from app.services.auto_avsr_engine import AutoAvsrEngine
+    from app.services.native_engine import NativeAvsrEngine
 
     assert (
-        AutoAvsrEngine._select_device(
+        NativeAvsrEngine._select_device(
             "auto",
             cuda_available=False,
             allow_cpu_fallback=True,
@@ -185,7 +185,7 @@ def test_device_selection_falls_back_to_cpu():
         == "cpu"
     )
     assert (
-        AutoAvsrEngine._select_device(
+        NativeAvsrEngine._select_device(
             "cuda",
             cuda_available=False,
             allow_cpu_fallback=True,

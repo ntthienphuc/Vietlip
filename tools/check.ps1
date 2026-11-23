@@ -20,7 +20,7 @@ function Invoke-Check {
 Push-Location $projectRoot
 try {
     $pythonSources = @('server/app', 'server/tests', 'server/desktop_launcher.py',
-        'server/desktop_runtime.py', 'tools/package_delivery.py')
+        'server/desktop_runtime.py')
     Invoke-Check $Python (@('-m', 'ruff', 'check') + $pythonSources)
     Invoke-Check $Python (@('-m', 'ruff', 'format', '--check') + $pythonSources)
     Invoke-Check 'dart' @('format', '--output=none', '--set-exit-if-changed', 'lib', 'test')
@@ -28,7 +28,7 @@ try {
     Invoke-Check 'flutter' @('test', '--no-pub')
     Push-Location 'server'
     try {
-        Invoke-Check $Python @('-m', 'pytest', 'tests', '-q')
+        Invoke-Check $Python @('-m', 'pytest', 'tests', '../packaging/windows_server/tests', '-q')
     } finally {
         Pop-Location
     }
