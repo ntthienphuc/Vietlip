@@ -17,13 +17,11 @@ lưu ngoài Git.
 ## Biên tập lại hai báo cáo
 
 Hai tệp nguồn Typst cùng dùng mẫu Basic Report 0.5.0 trong `template`
-(giấy phép MIT), gói Hydra 0.6.2, Times New Roman và Calibri. Tạo thư mục
-làm việc cục bộ, chép hai nguồn và `template` vào đó. Chép thư mục
-`artifacts/final_review_20261120/images` của máy bàn giao vào cạnh hai nguồn.
-Thư mục này gồm `logo.png`, `desktop.png`, `connected.png`, `guide-live.png`
-và `history-export.png`. Ảnh phiên có người dùng được quản lý cục bộ.
+(giấy phép MIT), gói Hydra 0.6.2, Times New Roman và Calibri. Các thư mục
+`template`, `images` và `figures` cạnh hai nguồn chứa đầy đủ mẫu và hình.
+Hình 3 dùng `figures/live-captions.png`, chỉ chứa phần giao diện phụ đề.
 
-Trong thư mục làm việc, chạy cho mỗi tài liệu:
+Tại thư mục chứa hai tệp Typst, chạy:
 
 ```powershell
 typst compile --creation-timestamp 1795136400 01_Huong_dan_cai_dat_va_su_dung_VietLip.typ

@@ -12,29 +12,15 @@
 
 #let remark(title,it)=block(width:100%,inset:(left:10pt,top:5pt,bottom:5pt,right:4pt),stroke:(left:1.5pt+navy),above:6pt,below:5pt)[#set par(justify:false);#strong(title) #it];
 
-#heading(level: 1, numbering: none)[#text("Nhận dạng lời nói tiếng Việt từ khẩu hình trong luồng video")]
+#heading(level:1,numbering:none)[#text("1. Bài toán và kiến trúc hệ thống")]
 
-#block(above: 4pt, below: 9pt)[#set text(size: 11.4pt, fill: muted);#text("Báo cáo kỹ thuật về VietLip 1.10.5. Đối tượng khảo sát là quá trình suy luận từ hình camera đến phụ đề tiếng Việt trong một phiên đang diễn ra.")]
+#heading(level:2,numbering:none,outlined:false)[Tóm tắt]
 
-#heading(level: 2, numbering: none, outlined: false)[#text("Tóm tắt")]
+#par[VietLip tạo phụ đề tiếng Việt từ chuỗi ảnh khuôn mặt. Máy chủ căn chỉnh vùng miệng, mã hóa chuyển động bằng mạng tích chập và Conformer, rồi giải mã văn bản bằng điểm kết hợp CTC và attention. Máy chủ xử lý các cửa sổ hình chồng lấn. Khi hai cửa sổ liên tiếp thống nhất về chữ và mốc thời gian, một phần phụ đề có thể hiện ngay trong lúc người dùng đang nói.]
 
-#par([#text("VietLip giải quyết bài toán nhận dạng lời nói thị giác liên tục bằng cách kết hợp một mô hình nhận dạng theo đoạn với bộ điều khiển thời gian thực. Điện thoại thu hình khuôn mặt. Máy chủ căn chỉnh vùng miệng, mã hóa chuỗi ảnh bằng mạng tích chập và Conformer, sau đó giải mã các đơn vị văn bản tiếng Việt bằng điểm kết hợp CTC và attention. Cùng một phần lời có thể được suy luận nhiều lần trên các cửa sổ chồng lấn. Thỏa thuận giữa các lần suy luận và dấu hiệu ngừng chuyển động môi quyết định thời điểm công bố phụ đề.")])
-
-#par([#text("Một nhánh tùy chọn dùng Gemini để gợi ý cách diễn đạt từ câu đã chốt. Cách phân tách này cho phép quan sát trực tiếp hai nguồn sai số, gồm sai số từ tín hiệu thị giác và sai số do diễn giải lại bằng ngôn ngữ. Báo cáo mô tả kiến trúc, nguyên lý xác lập mốc thời gian, quy tắc hiển thị và điều kiện giới hạn của mỗi cơ chế.")])
+#par[Khoảng nghỉ giữa các chuyển động môi giúp xác định điểm chốt đoạn. Nếu người dùng bật *Kèm gợi ý câu*, Gemini nhận phần chữ đã chốt và trả về một cách diễn đạt cho cùng đoạn. Ứng dụng giữ riêng hai kết quả.]
 
 #par([#strong[#text("Từ khóa")]#text("   Nhận dạng lời nói thị giác, tiếng Việt, Conformer, CTC, cửa sổ trượt, phụ đề trực tiếp.")])
-
-#heading(level: 2, numbering: none, outlined: false)[#text("Phạm vi và câu hỏi phương pháp")]
-
-#par([#text("Đơn vị mô tả là một phiên đọc môi từ camera toàn mặt. Báo cáo lần theo ba quyết định của hệ thống: chọn vùng ảnh nào làm tín hiệu, chọn chuỗi chữ nào từ một cửa sổ hình và chọn thời điểm công bố một phần chuỗi đó. Việc tách ba quyết định giúp giải thích trường hợp chữ đến muộn dù bộ nhận dạng đã có một giả thuyết sớm.")])
-
-#block(width:100%)[#set text(size: 11pt);#set par(justify:false,leading:0.65em);#table(columns:(0.31fr,0.69fr,), inset:7pt,stroke:(x,y)=>(top: if y==0 {0.7pt+navy} else {0.3pt+rule}), fill:(x,y)=>if y==0 {shade},table.header(strong([#text("Thành phần")]),strong([#text("Câu hỏi được giải quyết")])),[#text("Mô hình thị giác")],[#text("Chuỗi ảnh nào được mã hóa và hai nhánh giải mã cùng xếp hạng một tiền tố ra sao?")],[#text("Bộ điều khiển trực tiếp")],[#text("Dấu hiệu nào cho phép chốt phần lời khi khoảng dừng giữa các câu chưa rõ?")],[#text("Hậu xử lý ngôn ngữ")],[#text("Dịch vụ gợi ý nhận được thông tin gì sau khi câu gốc đã chốt?")])]
-
-#pagebreak(weak:true)
-
-#heading(level: 1, numbering: none)[#text("1. ")#text("Từ tín hiệu thị giác đến hai đầu ra")]
-
-#block(above: 4pt, below: 9pt)[#set text(size: 11.4pt, fill: muted);#text("Ký hiệu X = {(Iₜ, t)} là dãy khung hình đi kèm thời điểm thu. Đại lượng cần ước lượng là chuỗi văn bản tiếng Việt Y của người nói và thời điểm có thể công bố từng phần của Y.")]
 
 #block(width:100%,breakable:false)[#grid(columns:(1fr,10pt,1fr,10pt,1fr),align:horizon,[#block(width:100%,fill:shade,inset:6pt)[#set par(justify:false);#text(font:"Calibri",size:9.6pt,weight:"bold",fill:navy)[#text("Android")]#linebreak()#text(size:9.2pt)[#text("Khung hình JPEG có thời điểm thu")]]],[#align(center+horizon)[→]],[#block(width:100%,fill:shade,inset:6pt)[#set par(justify:false);#text(font:"Calibri",size:9.6pt,weight:"bold",fill:navy)[#text("Windows")]#linebreak()#text(size:9.2pt)[#text("Theo dõi mặt và suy luận SO17")]]],[#align(center+horizon)[→]],[#block(width:100%,fill:shade,inset:6pt)[#set par(justify:false);#text(font:"Calibri",size:9.6pt,weight:"bold",fill:navy)[#text("Android")]#linebreak()#text(size:9.2pt)[#text("Hiển thị chữ theo đúng đoạn")]]])]
 
@@ -68,7 +54,7 @@
 
 #par([#text("Ứng dụng hướng đến 25 hình/giây và luồng gửi được thu nhỏ có giữ tỷ lệ. Tần số mục tiêu xác định lưới lấy mẫu cho bộ nhận dạng. Khi camera hoặc mạng làm mất các pha chuyển động ngắn, việc lấy lại mẫu chỉ sắp xếp các quan sát sẵn có. Các chi tiết như thời điểm môi vừa khép rồi mở vẫn có thể thiếu.")])
 
-#remark([#text("Phạm vi áp dụng.")],[#text("Video toàn mặt từ camera phải đi qua bước định vị và căn chỉnh. Đầu vào vùng miệng đã căn sẵn dùng để phát lại dữ liệu có một đường tiền xử lý riêng. Khi so sánh hai nguồn cần ghi rõ loại đầu vào.")])
+#par[Video toàn mặt cần qua bước định vị và căn chỉnh. Với dữ liệu đã cắt sẵn vùng miệng, máy chủ dùng đường tiền xử lý dành cho ảnh vùng miệng.]
 
 #pagebreak(weak:true)
 
@@ -102,13 +88,11 @@
 
 #remark([#text("Quy tắc xếp hạng của cấu hình triển khai")],[#text("S = 0,90 × S_attention + 0,10 × S_CTC. Beam search giữ tối đa ba giả thuyết ở mỗi bước. Các hệ số này mô tả cách tìm kiếm khi suy luận.")])
 
-#par([#strong[#text("Ví dụ tính điểm.")]#text(" Giả sử hai tiền tố A và B có cặp điểm (attention, CTC) lần lượt là (−1,0; −3,0) và (−1,1; −1,2). Điểm kết hợp của A là −1,20, của B là −1,11. B xếp trên A vì điểm CTC của B bù được phần chênh lệch attention. Các số minh họa phép tính, độc lập với một câu quay cụ thể.")])
+#par([#strong[#text("Ví dụ tính điểm.")]#text(" Giả sử hai tiền tố A và B có cặp điểm (attention, CTC) lần lượt là (−1,0; −3,0) và (−1,1; −1,2). Điểm kết hợp của A là −1,20, của B là −1,11. B xếp trên A vì điểm CTC của B bù được phần chênh lệch attention.")])
 
 #heading(level: 2, numbering: none, outlined: false)[#text("4.3. Từ chuỗi token đến mốc chữ")]
 
 #par([#text("Sau khi chọn chuỗi, hệ thống dùng căn chỉnh Viterbi trên điểm CTC để tìm đường thời gian phù hợp với các token đã dự đoán. Các mảnh thuộc cùng đơn vị hiển thị được gom theo biên SentencePiece. Mốc đầu và cuối thu được dùng để so sánh hai dự đoán từ cửa sổ chồng lấn. Sai token vẫn có thể nhận được một mốc căn chỉnh hợp lệ.")])
-
-#par([#text("SO17 sinh trực tiếp các đơn vị văn bản tiếng Việt. Nhánh thị giác xếp hạng các chuỗi ứng viên bằng beam search CTC–attention trên bảng SentencePiece. Gemini chỉ tham gia sau khi đoạn văn bản gốc đã chốt.")])
 
 #pagebreak(weak:true)
 
@@ -158,7 +142,7 @@
 
 #par([#text("Khi một phần chưa giải quyết sắp rời khỏi phạm vi quan sát, hệ thống giữ các đơn vị cũ đã trượt ra ngoài theo quy tắc bộ đệm hữu hạn. Tại điểm dừng, giả thuyết cuối quyết định phần chưa chốt. Kết quả là đoạn ngắn có thể chỉ hiện chữ sau lúc nói xong, còn đoạn dài có cơ hội hiện từng cụm trước đó.")])
 
-#remark([#text("Độ trễ cần phân biệt")],[#text("Thời gian tới chữ đầu tiên và thời gian từ lúc dứt lời đến phụ đề chốt trả lời hai câu hỏi khác nhau. Để đo trải nghiệm thực, mốc kết thúc phải là lúc điện thoại vẽ chữ lên màn hình.")])
+#par[Độ trễ đến chữ đầu tiên phụ thuộc vào lượng hình đã tích lũy và mức thống nhất giữa các cửa sổ. Sau khi người nói dừng, thời gian đến phụ đề cuối còn gồm khoảng chờ chốt đoạn, lượt giải mã cuối và thời gian truyền kết quả về điện thoại.]
 
 #pagebreak(weak:true)
 
@@ -174,35 +158,20 @@
 
 #heading(level: 2, numbering: none, outlined: false)[#text("7.2. Phần tín hiệu Gemini có thể sử dụng")]
 
-#par([#text("Một kết hợp từ quen thuộc có thể giúp khôi phục cách diễn đạt khi bản gốc chỉ sai nhẹ. Tuy nhiên, hai câu có nghĩa khác nhau đều có thể đúng ngữ pháp và phù hợp với cùng một chuỗi đọc môi sai. Gemini chỉ nhận văn bản đã chọn, nên không thể xem lại vùng miệng hoặc so sánh các ứng viên thị giác đã bị beam search loại bỏ. Câu trôi chảy vẫn cần người nói xác nhận khi ý nghĩa quan trọng.")])
+#par([#text("Một kết hợp từ quen thuộc có thể giúp khôi phục cách diễn đạt khi bản gốc chỉ sai nhẹ. Tuy nhiên, hai câu có nghĩa khác nhau đều có thể đúng ngữ pháp và phù hợp với cùng một chuỗi đọc môi sai. Gemini chỉ nhận văn bản đã chọn, nên không thể xem lại vùng miệng hoặc so sánh các ứng viên thị giác đã bị beam search loại bỏ.")])
 
 #heading(level: 2, numbering: none, outlined: false)[#text("7.3. Trường hợp tiếng Việt")]
 
-#par([#text("Trong cặp “tối” và “thôi”, phần vần tương tự có thể tạo quỹ đạo môi gần nhau, trong khi các khác biệt về cách bật âm và thanh điệu có dấu hiệu thị giác yếu. Đây là ví dụ ngôn ngữ để minh họa tính nhập nhằng, không phải kết luận rằng hai tiếng luôn có cùng khẩu hình. Tên hiếm, chữ số và phủ định ngắn đặc biệt nhạy với diễn giải theo ngữ cảnh.")])
-
-#remark([#text("Hàm ý thiết kế")],[#text("Gợi ý có thể về sau phụ đề gốc hoặc vắng khi mất Internet. Việc giữ hai dòng cùng định danh đoạn cho phép người dùng xem bằng chứng thị giác ban đầu và cân nhắc cách diễn đạt được đề xuất.")])
+#par[Chẳng hạn, “tối” và “thôi” có phần vần gần nhau. Góc quay có thể làm mờ dấu hiệu bật hơi; cao độ của thanh điệu cũng không thể quan sát trực tiếp từ môi. Khi phần chữ đầu vào còn mơ hồ, ngữ cảnh có thể khiến mô hình ngôn ngữ chọn một cách diễn đạt khác ý người nói.]
 
 #pagebreak(weak:true)
 
-#heading(level: 1, numbering: none)[#text("8. ")#text("Phạm vi diễn giải phương pháp")]
+#heading(level:1,numbering:none)[Tài liệu tham khảo]
 
-#block(above: 4pt, below: 9pt)[#set text(size: 11.4pt, fill: muted);#text("Các thành phần đã mô tả xác định cách tạo phụ đề của VietLip 1.10.5. Chất lượng sử dụng còn phụ thuộc lượng thông tin thị giác thực sự quan sát được và điều kiện triển khai.")]
+#block(above:8pt,below:10pt)[#link("https://arxiv.org/abs/2303.14307")[#strong("1. Ma và cộng sự (2023).") Auto-AVSR: Audio-Visual Speech Recognition with Automatic Labels.]]
 
-#heading(level: 2, numbering: none, outlined: false)[#text("Điều kiện cần ghi khi mô tả một thí nghiệm")]
+#block(above:8pt,below:10pt)[#link("https://arxiv.org/abs/2005.08100")[#strong("2. Gulati và cộng sự (2020).") Conformer: Convolution-augmented Transformer for Speech Recognition.]]
 
-#par([#text("Ghi loại đầu vào (toàn mặt hoặc vùng môi đã căn), người nói, góc nhìn, ánh sáng, khoảng cách camera, thiết bị xử lý và chế độ phụ đề. Tách người nói và nội dung giữa các tập nếu mục tiêu là đánh giá khả năng tổng quát hóa. Khi tính lỗi theo tiếng cách nhau bằng khoảng trắng, cần nêu rõ chính sách xử lý dấu tiếng Việt, câu bị gộp và đoạn không sinh chữ.")])
+#block(above:8pt,below:10pt)[#link("https://arxiv.org/abs/1609.06773")[#strong("3. Kim, Hori và Watanabe (2017).") Joint CTC-Attention based End-to-End Speech Recognition using Multi-task Learning.]]
 
-#par([#text("Để đánh giá riêng giá trị của hậu xử lý, giữ nguyên video, mốc đoạn và phụ đề gốc cho mọi nhánh. Đối chiếu bản gốc và bản gợi ý với cùng lời chuẩn do người nói xác nhận. Ghi cả trường hợp gợi ý sửa đúng và trường hợp gợi ý làm sai thêm. Cách đối chiếu này tách ảnh hưởng của mô hình ngôn ngữ khỏi thay đổi do camera hoặc phân đoạn.")])
-
-#heading(level: 2, numbering: none, outlined: false)[#text("Tài liệu phương pháp")]
-
-#block(above:4pt,below:5pt)[#link("https://arxiv.org/abs/2303.14307")[#strong[#text("[1] Ma và cộng sự (2023). Auto-AVSR")]]#linebreak()#text("Audio-Visual Speech Recognition with Automatic Labels. Nguồn cho họ kiến trúc nhận dạng mà bộ suy luận thị giác kế thừa.")]
-
-#block(above:4pt,below:5pt)[#link("https://arxiv.org/abs/2005.08100")[#strong[#text("[2] Gulati và cộng sự (2020). Conformer")]]#linebreak()#text("Convolution-augmented Transformer for Speech Recognition. Cơ sở kết hợp tích chập và self-attention.")]
-
-#block(above:4pt,below:5pt)[#link("https://arxiv.org/abs/1609.06773")[#strong[#text("[3] Kim, Hori và Watanabe (2017). Joint CTC-Attention")]]#linebreak()#text("Joint CTC-Attention based End-to-End Speech Recognition using Multi-task Learning. Cơ sở của cách ghép CTC và attention.")]
-
-#block(above:4pt,below:5pt)[#link("https://arxiv.org/abs/1808.06226")[#strong[#text("[4] Kudo và Richardson (2018). SentencePiece")]]#linebreak()#text("A simple and language independent subword tokenizer and detokenizer for Neural Text Processing. Cơ sở biểu diễn chuỗi ở mức mảnh văn bản.")]
-
-#v(5pt)
-#cap[Mẫu trình bày: #link("https://typst.app/universe/package/basic-report/")[Basic Report 0.5.0], Roland Schätzle. Dự án VietLip Việt hóa và điều chỉnh cho ấn bản này.]
+#block(above:8pt,below:10pt)[#link("https://aclanthology.org/D18-2012/")[#strong("4. Kudo và Richardson (2018).") SentencePiece: A simple and language independent subword tokenizer and detokenizer for Neural Text Processing.]]

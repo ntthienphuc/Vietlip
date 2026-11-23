@@ -28,6 +28,7 @@ Bộ nhận dạng dùng SO17 FP32, beam 3, trọng số CTC 0,1, cửa sổ t�
 
 ## Phát triển và bàn giao
 
+- Đội triển khai bắt đầu từ [hướng dẫn tự build APK và bộ cài Windows](docs/BUILD_VI.md). Hướng dẫn có cách chuẩn bị checkpoint SO17, kiểm thử và ký APK.
 - Flutter dùng `flutter analyze` và `flutter test`. Với bản release, dùng `build_android.ps1 -Mode release` cùng cấu hình ký cục bộ.
 - Bản Windows dùng [quy trình đóng gói](packaging/windows_server/README.md). Theo mặc định builder tạo bản không kèm key. Switch `-IncludeSavedGeminiKey` chỉ dành cho bàn giao nội bộ vì người nhận EXE có thể trích key và sử dụng hạn mức chung.
 - Model, key, APK/EXE, video riêng và tệp build được quản lý ngoài Git. Giấy phép đi kèm thư viện nằm trong [thư mục vendor](server/vendor). Bộ cài hiện dành cho thử nghiệm nội bộ.
