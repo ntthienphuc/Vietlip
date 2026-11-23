@@ -1,8 +1,21 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lip_reader/src/data/settings_controller.dart';
+import 'package:lip_reader/src/models/reading_method.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  test('existing suggestion sessions use Gemini after upgrading', () async {
+    SharedPreferences.setMockInitialValues({
+      'vietlip_ai_provider_v1': 'groq',
+      'vietlip_reading_method_v1': 'gateway_direct',
+      'lip_reader_api_url': 'http://192.168.1.20:7100',
+    });
+    final settings = SettingsController();
+    await settings.load();
+    expect(settings.aiProvider, AiProvider.gemini);
+    expect(settings.readingMethod, ReadingMethod.recovery);
+    expect(settings.apiUrl, 'http://192.168.1.20:7100');
+  });
   test('LAN address entry accepts IP, explicit port and full URL', () {
     expect(
       SettingsController.normalizeServerAddress(' 192.168.1.20 '),

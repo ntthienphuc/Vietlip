@@ -54,7 +54,9 @@ class AutoStream:
         self.receipt_event = asyncio.Event()
         self.trace = LiveTrace()
         self.detector = VisualMotionDetector(self.kind)
-        self.gate = EndpointPolicy(silence_seconds=0.6) if self.kind == "raw_face" else EndpointPolicy()
+        self.gate = (
+            EndpointPolicy(silence_seconds=0.6) if self.kind == "raw_face" else EndpointPolicy()
+        )
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="lip-activity")
         self.event, self.send_lock = asyncio.Event(), asyncio.Lock()
         self.current, self.pending = None, deque()

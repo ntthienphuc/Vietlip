@@ -79,6 +79,7 @@ server/.ruff_cache/
 *.gguf
 /server/tools/
 **/android/.gradle/
+**/android/.kotlin/
 
 # Local release packaging
 *.exe

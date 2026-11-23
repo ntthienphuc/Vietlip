@@ -127,7 +127,9 @@ class ServerWindow:
         footer = ttk.Frame(panel)
         footer.pack(side="bottom", fill="x", pady=(20, 0))
         ttk.Label(
-            footer, text="Đọc môi bằng hình ảnh\nGợi ý câu qua Gemini khi được chọn", style="Muted.TLabel"
+            footer,
+            text="Đọc môi bằng hình ảnh\nGợi ý câu qua Gemini khi được chọn",
+            style="Muted.TLabel",
         ).pack(side="left")
         ttk.Button(footer, text="Đóng máy chủ", command=self.close).pack(side="right")
         self.footer = footer
@@ -155,19 +157,30 @@ class ServerWindow:
         pairing.pack(fill="x", pady=(0, 16))
         self.qr_placeholder = tk.PhotoImage(width=1, height=1)
         self.qr_label = tk.Label(
-            pairing, bg="white", fg="#5f6f84", width=264, height=264,
-            wraplength=220, image=self.qr_placeholder, compound="center",
+            pairing,
+            bg="white",
+            fg="#5f6f84",
+            width=264,
+            height=264,
+            wraplength=220,
+            image=self.qr_placeholder,
+            compound="center",
         )
         self.qr_label.pack(side="left", padx=(0, 18))
         connection = ttk.Frame(pairing, style="Card.TFrame")
         connection.pack(side="left", fill="both", expand=True, pady=8)
         ttk.Label(
-            connection, text="Kết nối điện thoại", style="Card.TLabel",
-            font=("Segoe UI", 15, "bold"), foreground="#1e2742",
+            connection,
+            text="Kết nối điện thoại",
+            style="Card.TLabel",
+            font=("Segoe UI", 15, "bold"),
+            foreground="#1e2742",
         ).pack(anchor="w")
         ttk.Label(
-            connection, text="Mở VietLip trên điện thoại\nvà vào Cài đặt → Quét QR.",
-            style="Card.TLabel", justify="left",
+            connection,
+            text="Mở VietLip trên điện thoại\nvà vào Cài đặt → Quét QR.",
+            style="Card.TLabel",
+            justify="left",
         ).pack(anchor="w", pady=(6, 14))
         self.address_box = ttk.Combobox(
             connection,
@@ -191,20 +204,27 @@ class ServerWindow:
             side="left", padx=(10, 0)
         )
         hint = ttk.Label(
-            connection, textvariable=self.network_status, style="Card.TLabel",
-            justify="left", wraplength=270,
+            connection,
+            textvariable=self.network_status,
+            style="Card.TLabel",
+            justify="left",
+            wraplength=270,
         )
         hint.pack(anchor="w", pady=(6, 0))
         self.lan.trace_add("write", self.update_pairing_code)
         self.update_pairing_code()
         options = ttk.Frame(panel)
         options.pack(fill="x")
-        self.key_button = ttk.Button(options, text="Cài đặt key Gemini", command=self.set_key, state="disabled")
+        self.key_button = ttk.Button(
+            options, text="Cài đặt key Gemini", command=self.set_key, state="disabled"
+        )
         self.key_button.pack(side="left")
         self.log_toggle = ttk.Button(options, text="Xem nhật ký", command=self.toggle_logs)
         self.log_toggle.pack(side="left", padx=10)
         self.key_status = tk.StringVar(value="")
-        ttk.Label(panel, textvariable=self.key_status, style="Muted.TLabel").pack(anchor="w", pady=(6, 0))
+        ttk.Label(panel, textvariable=self.key_status, style="Muted.TLabel").pack(
+            anchor="w", pady=(6, 0)
+        )
         self.log_container = ttk.Frame(panel)
         self.log_box = scrolledtext.ScrolledText(
             self.log_container,
@@ -230,15 +250,19 @@ class ServerWindow:
 
     def set_key(self):
         value = simpledialog.askstring(
-            "Gemini", "Nhập key Gemini để thêm gợi ý sau mỗi câu. Key lưu trên PC này.",
-            show="*", parent=self.root,
+            "Gemini",
+            "Nhập key Gemini để thêm gợi ý sau mỗi câu. Key lưu trên PC này.",
+            show="*",
+            parent=self.root,
         )
         if value is None:
             return
         try:
             configure_gemini(value)
         except (OSError, ValueError):
-            messagebox.showerror(APP_NAME, "Chưa lưu được key Gemini. Kiểm tra key rồi thử lại.", parent=self.root)
+            messagebox.showerror(
+                APP_NAME, "Chưa lưu được key Gemini. Kiểm tra key rồi thử lại.", parent=self.root
+            )
             return
         self.key_status.set("Đã lưu key Gemini. Chọn Kèm gợi ý câu trên điện thoại.")
 
@@ -330,7 +354,11 @@ class ServerWindow:
                 self.log_box.configure(state="disabled")
             elif kind == "gemini":
                 self.key_button.configure(state="normal")
-                self.key_status.set("Gemini đã có key trên PC." if value else "Phụ đề trực tiếp đã sẵn sàng. Thêm key để dùng gợi ý câu.")
+                self.key_status.set(
+                    "Gemini đã có key trên PC."
+                    if value
+                    else "Phụ đề trực tiếp đã sẵn sàng. Thêm key để dùng gợi ý câu."
+                )
             elif kind in ("health", "external"):
                 self.polling = False
                 if value:
@@ -371,7 +399,9 @@ class ServerWindow:
         self.qr_label.configure(
             image=self.qr_image or self.qr_placeholder,
             compound="center",
-            text="" if self.qr_image else (
+            text=""
+            if self.qr_image
+            else (
                 "Chưa có IP mạng nội bộ" if not self.addresses else "Có thể nhập IP trong Cài đặt"
             ),
         )

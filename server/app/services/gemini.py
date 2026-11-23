@@ -19,7 +19,9 @@ PROMPT = (
 def payload(text: str, model: str) -> dict:
     return {
         "systemInstruction": {"parts": [{"text": PROMPT}]},
-        "contents": [{"role": "user", "parts": [{"text": json.dumps({"text": text}, ensure_ascii=False)}]}],
+        "contents": [
+            {"role": "user", "parts": [{"text": json.dumps({"text": text}, ensure_ascii=False)}]}
+        ],
         "generationConfig": {
             "temperature": 0,
             "maxOutputTokens": min(1536, max(128, 4 * len(text.split()) + 32)),

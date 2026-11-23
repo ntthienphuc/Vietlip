@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from app.config import Settings
 from app.main import create_app
-from app.services.engine import MockEngine
+from mock_engine import MockEngine
 from app.services.streaming_buffer import Frame, FrameBuffer, WordTimeline, unpack_frame
 from app.services.word_alignment import align_words
 from app.services.realtime import LiveJpegDecoder, decode_jpeg_frames

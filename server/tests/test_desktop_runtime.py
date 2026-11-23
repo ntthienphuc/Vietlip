@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.config import Settings
 from app.main import create_app
-from app.services.engine import MockEngine
+from mock_engine import MockEngine
 
 spec = importlib.util.spec_from_file_location(
     "desktop_runtime", Path(__file__).parents[1] / "desktop_runtime.py"

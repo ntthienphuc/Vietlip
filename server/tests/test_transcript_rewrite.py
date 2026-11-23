@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 import pytest
 
 from app.main import create_app
-from app.services.engine import MockEngine
+from mock_engine import MockEngine
 from app.services import gemini
 from app.services.transcript_rewrite import RewriteRequest, TranscriptRewriter
 
@@ -39,8 +39,17 @@ def gateway(tmp_path, monkeypatch):
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             payload = {
-                "candidates": [{"finishReason": response["finish"], "content": {"parts": [
-                    {"thought": True, "text": "hidden"}, {"text": response["text"]}]}}],
+                "candidates": [
+                    {
+                        "finishReason": response["finish"],
+                        "content": {
+                            "parts": [
+                                {"thought": True, "text": "hidden"},
+                                {"text": response["text"]},
+                            ]
+                        },
+                    }
+                ],
                 "modelVersion": gemini.DEFAULT_MODEL,
             }
             try:

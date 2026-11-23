@@ -29,12 +29,8 @@ enum ReadingMethod {
 }
 
 enum AiProvider {
-  gemini('gemini', 'Gemini', 'Google Flash-Lite'),
-  groq('groq', 'Groq', 'GPT-OSS 120B'),
-  openrouter('openrouter', 'OpenRouter', 'Model miễn phí');
+  gemini('gemini', 'Gemini', 'Google Flash-Lite');
 
   const AiProvider(this.id, this.label, this.subtitle);
   final String id, label, subtitle;
-  static AiProvider parse(String? id) =>
-      values.firstWhere((value) => value.id == id, orElse: () => gemini);
 }

@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.config import Settings
 from app.main import create_app
-from app.services.engine import MockEngine
+from mock_engine import MockEngine
 from app.services.nbest_consensus import summarize_nbest
 from app.services.realtime import ContinuousTranscript, LocalAgreement
 

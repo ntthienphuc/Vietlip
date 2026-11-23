@@ -105,7 +105,8 @@ class _MethodPickerState extends State<_MethodPicker> {
     } catch (_) {
       if (mounted) {
         setState(
-          () => _notice = 'Kết nối VietLip Server để kiểm tra dịch vụ gợi ý câu.',
+          () =>
+              _notice = 'Kết nối VietLip Server để kiểm tra dịch vụ gợi ý câu.',
         );
       }
     } finally {
@@ -116,7 +117,6 @@ class _MethodPickerState extends State<_MethodPicker> {
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
-      await widget.settings.setAiProvider(_provider);
       await widget.settings.setReadingMethod(_method);
       if (mounted) Navigator.pop(context);
     } catch (_) {

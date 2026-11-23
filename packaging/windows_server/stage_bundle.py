@@ -9,10 +9,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from pathlib import Path
 import shutil
 import sys
 import time
+from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 

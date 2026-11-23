@@ -6,11 +6,9 @@ class SettingsController extends ChangeNotifier {
   static const _apiUrlKey = 'lip_reader_api_url';
   static const _defaultApiUrl = '';
   static const _methodKey = 'vietlip_reading_method_v1';
-  static const _providerKey = 'vietlip_ai_provider_v1';
   ReadingMethod _readingMethod = ReadingMethod.visual;
   ReadingMethod get readingMethod => _readingMethod;
-  AiProvider _aiProvider = AiProvider.gemini;
-  AiProvider get aiProvider => _aiProvider;
+  AiProvider get aiProvider => AiProvider.gemini;
 
   String _apiUrl = _defaultApiUrl;
   String get apiUrl => _apiUrl;
@@ -18,7 +16,6 @@ class SettingsController extends ChangeNotifier {
   Future<void> load() async {
     final preferences = await SharedPreferences.getInstance();
     _readingMethod = ReadingMethod.parse(preferences.getString(_methodKey));
-    _aiProvider = AiProvider.parse(preferences.getString(_providerKey));
     _apiUrl = preferences.getString(_apiUrlKey) ?? _defaultApiUrl;
     // Old internal builds used USB forwarding or the Android emulator.
     // Ask for the PC's LAN address when upgrading those installations.
@@ -44,13 +41,6 @@ class SettingsController extends ChangeNotifier {
     final preferences = await SharedPreferences.getInstance();
     await preferences.setString(_methodKey, value.id);
     _readingMethod = value;
-    notifyListeners();
-  }
-
-  Future<void> setAiProvider(AiProvider value) async {
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.setString(_providerKey, value.id);
-    _aiProvider = value;
     notifyListeners();
   }
 

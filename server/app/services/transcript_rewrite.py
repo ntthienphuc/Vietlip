@@ -66,14 +66,23 @@ class TranscriptRewriter:
 
     @staticmethod
     def _configured(provider) -> bool:
-        return (isinstance(provider, dict) and provider.get("enabled", True) is True
-                and isinstance(provider.get("model"), str) and provider["model"] in gemini.THINKING)
+        return (
+            isinstance(provider, dict)
+            and provider.get("enabled", True) is True
+            and isinstance(provider.get("model"), str)
+            and provider["model"] in gemini.THINKING
+        )
 
     def methods(self) -> dict:
         provider = self._providers().get("gemini")
         configured = self._configured(provider)
-        available = [{"id": "gemini", "configured": configured,
-                      "model_id": provider["model"] if configured else ""}]
+        available = [
+            {
+                "id": "gemini",
+                "configured": configured,
+                "model_id": provider["model"] if configured else "",
+            }
+        ]
         return {
             "default_method": "visual",
             "default_provider": "gemini",
@@ -120,8 +129,12 @@ class TranscriptRewriter:
                 message="Dịch vụ AI này chưa được cấu hình trên máy tính.",
             )
         if now < self._billing_retry_at:
-            return RewriteResponse(**base, status="unavailable", code="billing_required",
-                                   message="Project Gemini đã hết tín dụng. Kiểm tra Google AI Studio trên PC.")
+            return RewriteResponse(
+                **base,
+                status="unavailable",
+                code="billing_required",
+                message="Project Gemini đã hết tín dụng. Kiểm tra Google AI Studio trên PC.",
+            )
         if self._active >= 2:
             return RewriteResponse(
                 **base,
@@ -169,6 +182,7 @@ class TranscriptRewriter:
     def _key(provider: dict) -> str:
         if provider.get("credential_store") == "windows_dpapi":
             from desktop_gemini import saved_key
+
             return saved_key()
         if provider.get("api_key_file"):
             path = Path(provider["api_key_file"])
@@ -193,8 +207,12 @@ class TranscriptRewriter:
             headers = {"Content-Type": "application/json", "User-Agent": f"VietLip/{APP_VERSION}"}
             key = self._key(provider)
             if not key:
-                return RewriteResponse(**base, status="unavailable", code="not_configured",
-                                       message="Thêm key Gemini trong VietLip Server trên PC.")
+                return RewriteResponse(
+                    **base,
+                    status="unavailable",
+                    code="not_configured",
+                    message="Thêm key Gemini trong VietLip Server trên PC.",
+                )
             headers["x-goog-api-key"] = key
             async with httpx.AsyncClient(timeout=self.timeout, trust_env=False) as client:
                 async with client.stream(
