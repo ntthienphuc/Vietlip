@@ -8,7 +8,7 @@ is needed to use CUDA; CPU remains the fallback.
 `build_installer.ps1` creates a new stage using `stage_bundle.py`, validates its
 hashes and imports, then compiles `VietLipServer.iss`. The resulting EXE contains
 the complete payload; no external BIN or ZIP is required. The full recipe is in
-[`docs/PROJECT_MAP.md`](../../docs/PROJECT_MAP.md).
+[Windows build guide](../../docs/BUILD.md#windows-server).
 
 Inno's EXE and internal BIN slices are embedded by `package_installer.py` in a
 small .NET Framework bootstrapper, compiled with the Windows-provided C# compiler.
@@ -29,9 +29,8 @@ Server UI: `server/desktop_launcher.py`. Profile and relocatable paths:
 the launcher script. `python311._pth` isolates imports from globally installed
 Python packages and includes the bundled server modules.
 
-The source `tools/connect_android_usb.ps1` remains a historical developer tool;
-it is not shipped or used by the VietLip user workflow. Distribution uses LAN IP
-entry. See `README_INSTALL.txt` for the guide included in the installer.
+The Android client pairs over the LAN by QR code or manual address entry.
+See `README_INSTALL.txt` for the Vietnamese guide included in the installer.
 
 The default remains SO17 visual recognition. Optional per-sentence AI recovery
 uses one Gemini key managed by the Windows launcher and preserves

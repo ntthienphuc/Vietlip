@@ -1,6 +1,6 @@
 # LipLens — đọc môi tiếng Việt · 1.5.0
 
-Repository riêng: [ntthienphuc/liplens-app](https://github.com/ntthienphuc/liplens-app).
+Kho mã nguồn lúc phát hành 1.5 là kho riêng. Địa chỉ hiện tại là [ntthienphuc/Vietlip](https://github.com/ntthienphuc/Vietlip).
 
 Ứng dụng Android dùng camera và máy chủ suy luận trên PC. Phụ đề live **chỉ dùng
 hình ảnh**; video lưu trên điện thoại có âm thanh để đối chiếu khi kiểm thử.

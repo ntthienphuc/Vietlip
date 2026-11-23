@@ -5,7 +5,7 @@ Hai sản phẩm của phiên bản này là APK Android (build 30, package `vn.
 ## 1. Lấy mã và checkpoint
 
 - Nếu nhận ZIP source nội bộ, giải nén toàn bộ. Checkpoint đã nằm ở `server\models\SO_seed17.pt`.
-- Với GitHub, chạy `git clone https://github.com/ntthienphuc/liplens-app.git vietlip` rồi `cd vietlip`. Chạy `.\tools\get_so17.ps1` để tải và kiểm tra checkpoint. Có thể [tải SO17 trực tiếp](https://github.com/ntthienphuc/liplens-app/releases/download/vietlip-1.10.5-so17/SO_seed17.pt) rồi lưu vào `server\models\SO_seed17.pt`. Chỉ build Android thì có thể bỏ qua checkpoint.
+- Với GitHub, chạy `git clone https://github.com/ntthienphuc/Vietlip.git vietlip` rồi `cd vietlip`. Chạy `.\tools\get_so17.ps1` để tải và kiểm tra checkpoint. Có thể [tải SO17 trực tiếp](https://github.com/ntthienphuc/Vietlip/releases/download/vietlip-1.10.5-so17/SO_seed17.pt) rồi lưu vào `server\models\SO_seed17.pt`. Chỉ build Android thì có thể bỏ qua checkpoint.
 - Nếu PC đã cài VietLip Server 1.10.5 bằng EXE bàn giao, builder cũng có thể lấy runtime và checkpoint từ bản cài đó theo bước 3.
 
 Đối chiếu checkpoint trước khi dùng. Script đóng gói cũng kiểm tra lại giá trị này.

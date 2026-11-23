@@ -16,7 +16,7 @@ if (Test-Path -LiteralPath $target) {
     Write-Output "SO17 already verified: $target"
     return
 }
-$url = 'https://github.com/ntthienphuc/liplens-app/releases/download/vietlip-1.10.5-so17/SO_seed17.pt'
+$url = 'https://github.com/ntthienphuc/Vietlip/releases/download/vietlip-1.10.5-so17/SO_seed17.pt'
 $temp = Join-Path $modelDir ("SO_seed17." + [guid]::NewGuid().ToString('N') + '.partial')
 try {
     & curl.exe --fail --location --retry 3 --silent --show-error --output $temp $url

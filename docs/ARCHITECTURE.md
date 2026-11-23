@@ -1,9 +1,10 @@
-# Application maintenance
+# VietLip architecture
 
-Current app: **VietLip 1.10.1**. User connections use local Wi-Fi/LAN. The desktop
-server shows its IP; Android accepts an IP or full URL and defaults to port 7100.
+The Android client and Windows launcher ship as **VietLip 1.10.5**. The visual
+backend reports **1.10.1** in `/healthz`. The desktop launcher shows a pairing QR
+code and a LAN address. Android also accepts a manually entered address.
 The Windows installer bundles Python 3.11, CPU/CUDA dependencies and SO17.
-See `PROJECT_MAP.md` and `packaging/windows_server/README.md` for packaging.
+See the [build guide](BUILD.md) and [Windows packaging notes](../packaging/windows_server/README.md).
 
 Previous architecture notes are preserved in `ARCHITECTURE_1_1_HISTORICAL.md`.
 
@@ -28,7 +29,7 @@ the current release has not been built or validated on an iPhone.
 | Recognition | `native_engine.py`, `incremental_decoder.py`, `cpu_ctc_prefix.py` | SO17 visual encoder/decoder and cached search |
 | Caption stability | `caption_stability.py`, `word_alignment.py` | Word ownership and agreement across overlapping windows |
 | Diagnostics | `caption_delivery.py`, `live_trace.py`, `live_evidence.py` | Size-bounded local traces, delivery timing, explicit unavailable spans |
-| Optional sentence recovery | `transcript_rewrite.py`, `lib/src/data/transcript_review.dart` | Save raw first; bounded per-sentence Groq/OpenRouter calls; preserve raw/AI pairs and history |
+| Optional sentence suggestions | `transcript_rewrite.py`, `gemini.py`, `lib/src/data/transcript_review.dart` | Send finalized text to Gemini and attach its suggestion to the original caption in session history |
 
 Paths in the first three capture rows are relative to the capture feature folder;
 server service rows are relative to `server/app/services`.
@@ -36,14 +37,14 @@ server service rows are relative to `server/app/services`.
 ## Maintenance boundaries
 
 - `server/app` is production runtime code; `server/experiments` contains optional
-  trials. Live uses SO17 visual inference. Version 1.10 adds per-sentence
-  Groq/OpenRouter recovery, isolated from inference and caption delivery.
+  trials. Live recognition uses SO17 visual inference. Version 1.10.5 requests
+  Gemini suggestions independently of visual inference and caption delivery.
   Legacy assisted metadata is retained but is not shown as a newly generated review.
 - `server/vendor` and `packages/camera_android_camerax` retain upstream notices.
   Format application code without mass-editing vendor code.
-- Models, recordings, signing credentials and generated reports remain local.
-  Never modify model hardlinks in place. A fresh checkout requires the separately
-  supplied checkpoint; `tools/import_model.ps1` validates its manifest hash.
+- The SO17 checkpoint is a public release asset. The [download script](../tools/get_so17.ps1)
+  verifies its SHA-256 digest before placing it in the checkout. Keep model
+  hardlinks read-only. Recordings and signing credentials are managed outside Git.
 - Video audio is for reference only. Live inference consumes JPEG frames.
 - A post-frame acknowledgement measures Flutter delivery plus return transport;
   it does not measure physical screen scanout or human-labeled speech end.
@@ -51,9 +52,8 @@ server service rows are relative to `server/app/services`.
   upload/job/WS routes and accepts only visual_only mode. Old assisted-mode
   submissions are rejected explicitly instead of silently rewriting text.
 - `/v1/rewrite-methods` exposes only configured method IDs; `/v1/rewrites` accepts
-  text and a fixed method ID. Endpoint/model/key configuration belongs to the PC,
-  outside Git and the installer. Rewrites never replace the visual transcript.
-  See [live AI methods](LIVE_AI_1_10.md).
+  text and a fixed method ID. The Windows launcher manages the Gemini key.
+  See [caption and suggestion behavior](LIVE_AI_1_10.md).
 
 ## Checks
 

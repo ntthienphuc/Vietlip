@@ -69,6 +69,6 @@ Seven source checkpoints, three averages and three anchored interpolations have
 been evaluated. Both dev-selected averages regress at least one phone clip. Keep
 SO17 for the application; see `CHECKPOINT_SELECTION_2026-11-09.md`. No additional
 phoneme training or Vast rental is needed in this iteration. UI and code maintenance are complete. Device delivery evidence is recorded in
-`RELEASE_1_5_0_2026-11-09.md`; the user-authorized private source repository is
-`https://github.com/ntthienphuc/liplens-app`. This closes the bounded optimization
+`RELEASE_1_5_0_2026-11-09.md`. The repository was private during this
+iteration and is now available at [Vietlip](https://github.com/ntthienphuc/Vietlip). This closes the bounded optimization
 iteration while explicitly retaining the documented free-speech accuracy limit.

@@ -1,42 +1,16 @@
-# VietLip — sơ đồ project
+# VietLip project layout
 
-Mã ứng dụng đang bảo trì: `E:\Project\Lip_App\lip_reader`.
-Bộ bàn giao 1.10.5 nằm trong `Downloads\VietLip_1.10.5_Tron_bo`, gồm APK,
-EXE, hai tài liệu PDF và hai video. [Danh mục, mã SHA-256 và nguồn hai báo
-cáo](ban-giao-1.10.5/README.md) được lưu cùng mã ứng dụng. Thư mục `output`
-chỉ được tạo khi build cục bộ. Shortcut **Bo cai VietLip** mở bộ trong Downloads.
-Recipe đóng gói và kiểm tra: [MAINTENANCE.md](MAINTENANCE.md).
-
-| Thư mục | Dùng để làm gì |
+| Path | Responsibility |
 | --- | --- |
-| `lib`, `android`, `ios` | App Flutter và mã nền tảng; Android là nền tảng đã build/test |
-| `server/app` | API, tiền xử lý và nhận dạng realtime |
-| `server/desktop_launcher.py`, `desktop_runtime.py` | Cửa sổ server Windows và cấu hình bộ cài |
-| `packages/camera_android_camerax` | Bản CameraX có sửa hướng hình và tốc độ khung |
-| `packaging/windows_server` | Bộ cài Windows hiện tại, runtime đi kèm và kiểm tra hash |
-| `test`, `server/tests` | Các kiểm thử ứng dụng và server |
-| `tools` | Công cụ build, ký và kiểm tra thiết bị dành cho người phát triển |
-| `docs` | Hướng dẫn, báo cáo phiên bản và quyết định chọn mô hình |
-| `output` | Đích build cục bộ, nằm ngoài Git |
-| `artifacts` | Video và bằng chứng thử nghiệm cục bộ, không đưa vào Git/bộ cài |
-| `research`, `server/experiments` | Thử nghiệm trước đây, không thuộc bộ cài cho người dùng |
+| [lib](../lib), [android](../android) | Flutter client, Android camera capture, pairing, captions, and session history. |
+| [packages/camera_android_camerax](../packages/camera_android_camerax) | CameraX adapter with the app’s orientation and frame pacing changes. |
+| [server/app](../server/app) | WebSocket transport, frame preprocessing, visual speech recognition, and sentence suggestions. |
+| [server/desktop_launcher.py](../server/desktop_launcher.py) and [desktop_runtime.py](../server/desktop_runtime.py) | Windows UI, QR pairing, model configuration, and readiness checks. |
+| [packaging/windows_server](../packaging/windows_server) | Runtime staging, payload verification, and Windows installer assembly. |
+| [test](../test) and [server/tests](../server/tests) | Flutter and server tests. Installer tests live under [packaging/windows_server/tests](../packaging/windows_server/tests). |
+| [tools](../tools) | Model download, signing, and development utilities. |
+| [research](../research) and [server/experiments](../server/experiments) | Offline experiments and historical model comparisons. |
 
-Thư mục build, cache, khóa ký và model vẫn được Git bỏ qua. Không đổi vị trí
-model hoặc kết quả thử nghiệm đã được tham chiếu trong báo cáo. Bộ cài chỉ mang
-SO17 đã chọn; không mang các video cá nhân hoặc checkpoint thử nghiệm khác.
+Start with the [build guide](BUILD.md) for the Android APK and Windows EXE. For the public checkpoint, use the [SO17 download script](../tools/get_so17.ps1). A standard source build uses the operator’s own Gemini key if sentence suggestions are enabled.
 
-## Tạo bộ cài mới
-
-```powershell
-.\build_android.ps1 -Mode release -OutputDir 'C:\VietLip-release\01-Android'
-.\packaging\windows_server\build_installer.ps1 `
-  -StageDirectory 'C:\VietLip-build\stage' `
-  -OutputDirectory 'C:\VietLip-release\02-Server-Windows'
-```
-
-Stage phải là thư mục mới. Builder kiểm hash, thử import bằng Python đi kèm,
-rồi tạo một Setup.exe chứa đầy đủ runtime và model, không cần file .bin ngoài.
-Nếu môi trường phát triển đã dọn, builder dùng runtime và checkpoint của
-VietLip Server đang cài; checkpoint vẫn phải khớp SHA-256 đã khóa.
-Sau build cần cài thử và kiểm lại payload/API/điện thoại; build thành công
-chưa chứng minh luồng cài đặt và nhận dạng hoạt động.
+The private 1.10.5 distribution includes the signed APK, the preconfigured Windows installer, two Vietnamese reports, and two demo videos. Its [distribution inventory and checksums](ban-giao-1.10.5/README.md) identify those files. Local build output, experimental captures, and signing material are managed outside the source tree.

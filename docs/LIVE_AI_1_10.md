@@ -1,13 +1,13 @@
-# Hành vi phụ đề của VietLip 1.10.5
+# Captions and sentence suggestions
 
-**Phụ đề trực tiếp** là mặc định. SO17 trên PC đọc các cửa sổ video chồng lấn và tự chốt đoạn theo chuyển động môi. Phụ đề có thể hiện trước khi nói xong khi các cửa sổ cùng xác nhận một cụm từ.
+**Live captions** (*Phụ đề trực tiếp*) is the default mode. SO17 reads overlapping video windows on the PC. The app can show a phrase as soon as consecutive windows agree. The server uses visible mouth activity to decide when to finalize a segment.
 
-**Kèm gợi ý câu** dùng cùng phụ đề gốc. Khi chốt một đoạn, PC có thể gửi văn bản đó tới Gemini 3.1 Flash-Lite. Điện thoại giữ phần gốc ở trên và gắn phản hồi bên dưới đúng câu. Các cập nhật cửa sổ tạm thời không gọi Gemini. Người dùng có thể tiếp tục nói trong lúc chờ. Nếu API lỗi hoặc chạm hạn mức, bản gốc vẫn được giữ.
+**Sentence suggestions** (*Kèm gợi ý câu*) use the same visual caption. Once the server finalizes a segment, it can send that text to Gemini 3.1 Flash-Lite. The phone keeps the original above the suggestion and associates both with the same segment. The user can keep speaking while the request is pending. If Gemini is unavailable or its quota is exhausted, the original caption remains available.
 
-## Cấu hình
+## Enable suggestions
 
-1. Với bộ cài nội bộ đã được cá nhân hóa, tài khoản Windows mới được cấp key trong lúc cài.
-2. Để nhập hoặc đổi key, mở **VietLip Server → Cài đặt key Gemini**. Server bảo vệ key bằng Windows DPAPI theo tài khoản đang dùng. Cập nhật hoặc cài lại giữ key người dùng đã lưu.
-3. Trên điện thoại mở **Cài đặt → Cách đọc môi → Kèm gợi ý câu → Áp dụng** và bắt đầu phiên mới. PC cần Internet để gọi Google.
+1. If you installed the preconfigured EXE from the private distribution package, the installer sets up a key on a fresh Windows profile. For a build from GitHub, open **VietLip Server → Cài đặt key Gemini** on the PC, paste your own key, and save it. Windows protects the saved key with DPAPI for the current account. Updates preserve that setting.
+2. On Android, open **Cài đặt → Cách đọc môi → Kèm gợi ý câu → Áp dụng** (settings → reading mode → include sentence suggestions → apply).
+3. Start a new session. The Android client communicates with the PC over the LAN. The PC needs internet access to request suggestions.
 
-Android chỉ liên lạc với VietLip Server. Lịch sử giữ phụ đề gốc và gợi ý riêng để người dùng đối chiếu. Mục tiêu của gợi ý là làm câu dễ đọc hơn. Với các chi tiết như phủ định, số hoặc tên riêng, nên xác nhận với người nói.
+Session history keeps both readings for comparison. Names, numbers, and negation can change the meaning of a sentence. Confirm these with the speaker when they matter.

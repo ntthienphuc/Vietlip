@@ -1,49 +1,53 @@
-# VietLip 1.10.5
+# VietLip
 
-VietLip hiển thị phụ đề tiếng Việt từ khẩu hình. Điện thoại Android gửi hình camera qua Wi-Fi/LAN đến VietLip Server trên Windows. Máy chủ chạy SO17 cục bộ. Nếu người dùng bật **Kèm gợi ý câu**, PC gửi văn bản đã chốt đến Google Gemini 3.1 Flash-Lite. Ứng dụng hiển thị phụ đề gốc và gợi ý ở hai dòng riêng.
+VietLip generates live Vietnamese captions from lip movements. An Android phone streams camera frames over local Wi-Fi to a Windows PC, where the SO17 visual speech model runs on CPU or a compatible NVIDIA GPU. Speech recognition uses the image stream alone.
 
-## Lấy mã nguồn và checkpoint SO17
+As the speaker talks, the app shows words that agree across successive video windows. When a segment ends, it saves the original caption. If the user enables sentence suggestions, the PC sends the finalized **text** to Gemini and displays the suggestion underneath. The speaker can continue while the suggestion is pending.
 
-Để tự build VietLip Server, chạy trên Windows:
+<img src="docs/ban-giao-1.10.5/figures/live-captions.png" alt="Vietnamese caption on Android, with the original reading above the optional Gemini suggestion" width="400">
+
+## Do I need a Gemini API key?
+
+**Live captions work without a key.** Gemini is optional and only powers the second line of suggested text.
+
+| How you install VietLip Server | How to enable Gemini suggestions |
+| --- | --- |
+| **Install the Windows EXE supplied in the private distribution package.** | The supplied installer sets up the included key for a new Windows user profile. Select **Kèm gợi ý câu** (include sentence suggestions) on Android to use it. |
+| **Build from this public repository**, including building your own EXE. | Open **VietLip Server → Cài đặt key Gemini** (Gemini API key settings) on the PC, paste your own Gemini API key, and save it. Then select **Kèm gợi ý câu** on Android. |
+
+You can replace a saved key in the same Windows settings. GitHub hosts the source and the SO17 model. The preconfigured EXE is distributed privately.
+
+## Get the source and model
+
+Run the following in PowerShell on Windows:
 
 ```powershell
-git clone https://github.com/ntthienphuc/liplens-app.git vietlip
-cd vietlip
+git clone https://github.com/ntthienphuc/Vietlip.git
+cd Vietlip
 .\tools\get_so17.ps1
 ```
 
-Script tải **SO17** từ GitHub Releases, kiểm tra SHA-256 và đặt tệp tại `server\models\SO_seed17.pt`. Nếu thích tải bằng trình duyệt, lưu [SO_seed17.pt](https://github.com/ntthienphuc/liplens-app/releases/download/vietlip-1.10.5-so17/SO_seed17.pt) vào cùng vị trí. Tệp có **973.779.255 byte**, SHA-256 `cddfb8c79f1db9d66695c0b1b7e2d98837187c600668a8aee3ccdd5b58981ecc`. Chỉ build APK Android thì có thể bỏ qua bước tải model.
+The script downloads the [SO17 checkpoint](https://github.com/ntthienphuc/Vietlip/releases/download/vietlip-1.10.5-so17/SO_seed17.pt), verifies its SHA-256 digest against the [model manifest](server/models/MODEL_MANIFEST.json), and installs it at `server/models/SO_seed17.pt`. Only the Windows server needs this file. The [1.10.5 model release](https://github.com/ntthienphuc/Vietlip/releases/tag/vietlip-1.10.5-so17) lists its size and checksum for manual downloads.
 
-Tiếp tục với [hướng dẫn build APK và EXE](docs/BUILD_VI.md). Phụ đề trực tiếp chạy trên PC. Để bật gợi ý câu cho bản tự build, nhập API key của bạn ở **VietLip Server → Cài đặt key Gemini**.
+## Build and run
 
-## Cài đặt và sử dụng
+1. **Build the two applications.** Follow the [Windows and Android build guide](docs/BUILD.md) to produce an APK and a Windows installer. Developers can also run the server directly from the checkout.
+2. **Pair the phone and PC.** Connect both devices to the same local network. Open **VietLip Server** on Windows and wait for **Sẵn sàng đọc môi** (ready). On Android, open **Cài đặt → Quét QR máy chủ** (settings → scan server QR). The PC also displays the address for manual entry.
+3. **Start captioning.** Tap **Bắt đầu đọc môi** (start lip reading), face the camera, and speak. End the session to review captions in **Lịch sử** (history). The visual model works over the LAN without a cloud account.
 
-[Danh mục bộ bàn giao 1.10.5](docs/ban-giao-1.10.5/README.md) gồm mã SHA-256
-của APK, bộ cài Windows, hai tài liệu PDF và hai video demo.
+## Source layout
 
-1. Trên Windows 10/11 x64, chạy **VietLip-Server-Setup-1.10.5.exe**. Dành khoảng 6 GB cho ứng dụng và thêm 3,5 GB trên ổ chứa thư mục tạm. Bộ cài mang theo Python, runtime và mô hình. Server tự dùng GPU NVIDIA khi CUDA khả dụng hoặc dùng CPU.
-2. Mở **VietLip Server** từ Start Menu và chờ **Sẵn sàng đọc môi**.
-3. Cài **VietLip-1.10.5.apk** (build 30). Trong **Cài đặt → Quét QR máy chủ**, hướng camera vào mã trên PC. Nếu cần, nhập địa chỉ cùng cổng đang hiển thị trên PC. Mạng nội bộ phải cho phép điện thoại kết nối tới PC.
-4. Trên điện thoại, chạm **Bắt đầu đọc môi**. Giữ mặt rõ, gần chính diện và có đủ ánh sáng. Sau khi nói xong, chờ phụ đề cuối rồi chạm **Kết thúc phiên**. Có thể xuất video ở **Lịch sử → Lưu video ra máy**.
-
-**Gemini.** Bản cài nội bộ có thể cấp sẵn key khi cài mới. Để thay key, mở **VietLip Server → Cài đặt key Gemini** trên Windows, nhập key mới và lưu. Cài lại giữ key hiện tại của tài khoản Windows. Chọn **Kèm gợi ý câu → Áp dụng** trên điện thoại. Chế độ **Phụ đề trực tiếp** dùng được khi PC chỉ có kết nối LAN.
-
-## Mã nguồn
-
-| Thành phần | Đường dẫn |
+| Component | Role |
 | --- | --- |
-| Giao diện, camera và lịch sử trên điện thoại | [lib](lib), [android](android), [CameraX adapter](packages/camera_android_camerax) |
-| Nhận dạng, WebSocket và gợi ý câu | [server/app](server/app) |
-| Cửa sổ máy chủ và ghép QR | [desktop_launcher.py](server/desktop_launcher.py) |
-| Tạo APK và EXE | [build_android.ps1](build_android.ps1), [đóng gói Windows](packaging/windows_server/README.md) |
-| Kiểm thử | [Flutter](test), [server](server/tests), [bộ cài](packaging/windows_server/tests) |
+| [Android client](lib) and [CameraX adapter](packages/camera_android_camerax) | Capture camera frames, pair with the PC, render captions, and save sessions. |
+| [Inference server](server/README.md) | Load SO17, process the video stream, and return provisional and finalized captions. |
+| [Windows launcher](server/desktop_launcher.py) | Show the pairing QR code, report model readiness, and manage the optional Gemini key. |
+| [Installer packaging](packaging/windows_server) | Bundle Python, runtime libraries, and the checkpoint into one Windows installer. |
 
-Bộ nhận dạng dùng SO17 FP32, beam 3, trọng số CTC 0,1, cửa sổ tối đa 6 giây. Tốc độ thực tế phụ thuộc camera, mạng và PC. Tiếng trong bản ghi phục vụ nghe lại. Người dùng cần xác nhận các phụ đề quan trọng.
+See the [architecture notes](docs/ARCHITECTURE.md) for the streaming pipeline and the [build guide](docs/BUILD.md#verify-the-installation) for an end-to-end check. A [Vietnamese build guide](docs/BUILD_VI.md) is also available.
 
-## Phát triển và bàn giao
+## Model and third-party assets
 
-- Đội triển khai bắt đầu từ [hướng dẫn tự build APK và bộ cài Windows](docs/BUILD_VI.md). Hướng dẫn có cách chuẩn bị checkpoint SO17, kiểm thử và ký APK.
-- Flutter dùng `flutter analyze` và `flutter test`. Với bản release, dùng `build_android.ps1 -Mode release` cùng cấu hình ký cục bộ.
-- Bản Windows dùng [quy trình đóng gói](packaging/windows_server/README.md). Theo mặc định builder tạo bản không kèm key. Switch `-IncludeSavedGeminiKey` chỉ dành cho bàn giao nội bộ vì người nhận EXE có thể trích key và sử dụng hạn mức chung.
-- Model, key, APK/EXE, video riêng và tệp build được quản lý ngoài Git. Giấy phép đi kèm thư viện nằm trong [thư mục vendor](server/vendor). Bộ cài hiện dành cho thử nghiệm nội bộ.
-- Xem [kiến trúc](docs/ARCHITECTURE.md), [hành vi gợi ý theo câu](docs/LIVE_AI_1_10.md) và [sơ đồ project](docs/PROJECT_MAP.md).
+Version **1.10.5** ships the Android client (build **30**, `vn.lipread.lip_reader`) and the Windows x64 server. The SO17 model predicts speech from visible movement. Some Vietnamese words have similar mouth shapes, and a fluent suggestion can still change the intended meaning. Session history retains both readings for review.
+
+Upstream components have their own terms. Review the [vendored license notices](server/vendor/licenses), [CameraX license](packages/camera_android_camerax/LICENSE), and [face-alignment asset terms](server/assets/README.md) before redistributing an installer.
